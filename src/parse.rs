@@ -16,6 +16,17 @@ pub fn parse_program(src: &str) -> Result<Program, LirError> {
             fix_hint: "Start the program with a line containing only lir/1".into(),
         });
     }
+    // §1: header line must be followed by a newline (`\n` or `\r\n`).
+    let after_header = trimmed.strip_prefix("lir/1").unwrap_or("");
+    if !(after_header.starts_with('\n') || after_header.starts_with("\r\n")) {
+        return Err(LirError::Syntax {
+            code: "E_HEADER",
+            span: Span::new(0, trimmed.len().max(1)),
+            message: "first line must be exactly `lir/1` followed by a newline (`\\n` or `\\r\\n`)"
+                .into(),
+            fix_hint: "End the header line with a line feed before the rest of the program.".into(),
+        });
+    }
     let body = lines.next().unwrap_or("").trim_start_matches('\r');
     let offset = trimmed
         .find('\n')

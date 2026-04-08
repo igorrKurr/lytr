@@ -93,3 +93,46 @@ fn llvm_empty_minmax_has_empty_trap() {
     let ir = emit_llvm_ir(&p).unwrap();
     assert!(ir.contains("trap_mm_empty"));
 }
+
+#[test]
+fn llvm_emits_bool_lit_count() {
+    let src = "lir/1\nlit(true,false) | filter eq true | reduce count";
+    let p = parse_program(src).unwrap();
+    check_program(&p).unwrap();
+    let ir = emit_llvm_ir(&p).unwrap();
+    assert!(ir.contains("define i32 @lir_main()"));
+    assert!(ir.contains("[2 x i8]"));
+    assert!(ir.contains("icmp eq i8"));
+}
+
+#[test]
+fn llvm_filter_or_short_circuits_no_bitwise_or_i1() {
+    let src = "lir/1\nrange(0,5) | filter gt 0 or gt 100 | reduce count";
+    let p = parse_program(src).unwrap();
+    check_program(&p).unwrap();
+    let ir = emit_llvm_ir(&p).unwrap();
+    assert!(
+        !ir.contains("or i1"),
+        "§8: `or` in filter should short-circuit via branches, not `or i1` on both sides"
+    );
+}
+
+#[test]
+fn llvm_mod_int_min_overflow_traps() {
+    let src = "lir/1\nlit(-2147483648) | map . mod -1 | reduce sum";
+    let p = parse_program(src).unwrap();
+    check_program(&p).unwrap();
+    let ir = emit_llvm_ir(&p).unwrap();
+    assert!(ir.contains("md2_"), "expected mod overflow guard block");
+    assert!(ir.contains("trap_ov"));
+}
+
+#[test]
+fn llvm_mod_i64_int_min_overflow_traps() {
+    let src = "lir/1\nlit(-9223372036854775808) | map . mod -1 | reduce sum";
+    let p = parse_program(src).unwrap();
+    check_program(&p).unwrap();
+    let ir = emit_llvm_ir(&p).unwrap();
+    assert!(ir.contains("md2_"), "expected i64 mod overflow guard");
+    assert!(ir.contains("trap_ov"));
+}

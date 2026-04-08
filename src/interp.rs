@@ -121,7 +121,7 @@ fn run_stage(flow: RunOutcome, st: &Stage, stage_index: usize) -> Result<RunOutc
     let span = stage_span(st);
     match flow {
         RunOutcome::Scalar(_) => Err(LirError::Runtime {
-            code: "R_SCALAR_FLOW",
+            code: "R_INDEX",
             span,
             message: "internal: scalar passed to stage".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -263,13 +263,29 @@ fn cmp_val(
     match (ty, v, rhs) {
         (ElemTy::Bool, Val::Bool(b), CmpRhs::Bool(r)) => Ok(match op {
             CmpOp::Eq => b == r,
-            _ => unreachable!("typecheck prevents"),
+            _ => {
+                return Err(LirError::Runtime {
+                    code: "R_INDEX",
+                    span: stage_span,
+                    message: "internal: non-eq bool cmp".into(),
+                    fix_hint: "Report a compiler bug.".into(),
+                    stage_index,
+                    element_index: Some(element_index),
+                });
+            }
         }),
-        (_, _, CmpRhs::Bool(_)) => unreachable!(),
+        (_, _, CmpRhs::Bool(_)) => Err(LirError::Runtime {
+            code: "R_INDEX",
+            span: stage_span,
+            message: "internal: bool rhs on integer stream".into(),
+            fix_hint: "Report a compiler bug.".into(),
+            stage_index,
+            element_index: Some(element_index),
+        }),
         (ElemTy::I32, Val::I32(l), CmpRhs::Int(r)) => {
             if *r < i32::MIN as i64 || *r > i32::MAX as i64 {
                 return Err(LirError::Runtime {
-                    code: "R_INTERNAL_CMP",
+                    code: "R_INDEX",
                     span: stage_span,
                     message: "cmp rhs out of range".into(),
                     fix_hint: "Report a compiler bug.".into(),
@@ -281,7 +297,7 @@ fn cmp_val(
         }
         (ElemTy::I64, Val::I64(l), CmpRhs::Int(r)) => Ok(cmp_i64(*l, *r, op)),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_CMP",
+            code: "R_INDEX",
             span: stage_span,
             message: "internal cmp mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -322,7 +338,7 @@ fn as_int(
         (ElemTy::I32, Val::I32(x)) => Ok(*x as i64),
         (ElemTy::I64, Val::I64(x)) => Ok(*x),
         _ => Err(LirError::Runtime {
-            code: "R_EXPECT_INT",
+            code: "R_INDEX",
             span: stage_span,
             message: "expected integer value".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -403,7 +419,7 @@ fn val_add(
             .map(Val::I64)
             .ok_or_else(|| runtime_overflow(stage_span, stage_index)),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_ADD",
+            code: "R_INDEX",
             span: stage_span,
             message: "add type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -438,7 +454,7 @@ fn val_sub(
             .map(Val::I64)
             .ok_or_else(|| runtime_overflow(stage_span, stage_index)),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_SUB",
+            code: "R_INDEX",
             span: stage_span,
             message: "sub type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -473,7 +489,7 @@ fn val_mul(
             .map(Val::I64)
             .ok_or_else(|| runtime_overflow(stage_span, stage_index)),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_MUL",
+            code: "R_INDEX",
             span: stage_span,
             message: "mul type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -530,7 +546,7 @@ fn val_div(
             Ok(Val::I64(x / y))
         }
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_DIV",
+            code: "R_INDEX",
             span: stage_span,
             message: "div type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -552,29 +568,42 @@ fn val_mod(
             if *y == 0 {
                 return Err(div_zero(stage_span, stage_index, element_index));
             }
+            if *x == i32::MIN && *y == -1 {
+                return Err(runtime_overflow(stage_span, stage_index));
+            }
             Ok(Val::I32(x % y))
         }
         (Val::I64(x), Val::I64(y)) => {
             if *y == 0 {
                 return Err(div_zero(stage_span, stage_index, element_index));
             }
+            if *x == i64::MIN && *y == -1 {
+                return Err(runtime_overflow(stage_span, stage_index));
+            }
             Ok(Val::I64(x % y))
         }
         (Val::I32(x), Val::I64(y)) => {
+            let x = *x as i64;
             if *y == 0 {
                 return Err(div_zero(stage_span, stage_index, element_index));
             }
-            Ok(Val::I64(*x as i64 % *y))
+            if x == i64::MIN && *y == -1 {
+                return Err(runtime_overflow(stage_span, stage_index));
+            }
+            Ok(Val::I64(x % *y))
         }
         (Val::I64(x), Val::I32(y)) => {
             let y = *y as i64;
             if y == 0 {
                 return Err(div_zero(stage_span, stage_index, element_index));
             }
+            if *x == i64::MIN && y == -1 {
+                return Err(runtime_overflow(stage_span, stage_index));
+            }
             Ok(Val::I64(x % y))
         }
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_MOD",
+            code: "R_INDEX",
             span: stage_span,
             message: "mod type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -600,7 +629,7 @@ fn val_neg(
             .map(Val::I64)
             .ok_or_else(|| runtime_overflow(stage_span, stage_index)),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_NEG",
+            code: "R_INDEX",
             span: stage_span,
             message: "neg type mismatch".into(),
             fix_hint: "Report a compiler bug.".into(),
@@ -631,7 +660,14 @@ fn scan_init_val(
             Ok(Val::I32(init as i32))
         }
         ElemTy::I64 => Ok(Val::I64(init)),
-        ElemTy::Bool => unreachable!(),
+        ElemTy::Bool => Err(LirError::Runtime {
+            code: "R_INDEX",
+            span: stage_span,
+            message: "internal: scan on bool stream".into(),
+            fix_hint: "Report a compiler bug.".into(),
+            stage_index,
+            element_index: None,
+        }),
     }
 }
 
@@ -665,7 +701,14 @@ fn reduce_op(
                 return match ty {
                     ElemTy::I32 => Ok(Val::I32(0)),
                     ElemTy::I64 => Ok(Val::I64(0)),
-                    ElemTy::Bool => unreachable!(),
+                    ElemTy::Bool => Err(LirError::Runtime {
+                        code: "R_INDEX",
+                        span: stage_span,
+                        message: "internal: sum on bool stream".into(),
+                        fix_hint: "Report a compiler bug.".into(),
+                        stage_index,
+                        element_index: None,
+                    }),
                 };
             }
             let mut acc = vs[0].clone();
@@ -679,7 +722,14 @@ fn reduce_op(
                 return match ty {
                     ElemTy::I32 => Ok(Val::I32(1)),
                     ElemTy::I64 => Ok(Val::I64(1)),
-                    ElemTy::Bool => unreachable!(),
+                    ElemTy::Bool => Err(LirError::Runtime {
+                        code: "R_INDEX",
+                        span: stage_span,
+                        message: "internal: prod on bool stream".into(),
+                        fix_hint: "Report a compiler bug.".into(),
+                        stage_index,
+                        element_index: None,
+                    }),
                 };
             }
             let mut acc = vs[0].clone();
@@ -719,10 +769,10 @@ fn val_min(a: &Val, b: &Val) -> Result<Val, LirError> {
         (Val::I32(x), Val::I64(y)) => Ok(Val::I64((*x as i64).min(*y))),
         (Val::I64(x), Val::I32(y)) => Ok(Val::I64((*x).min(*y as i64))),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_MIN",
+            code: "R_INDEX",
             span: Span::new(0, 0),
             message: "min mismatch".into(),
-            fix_hint: "".into(),
+            fix_hint: "Report a compiler bug.".into(),
             stage_index: 0,
             element_index: None,
         }),
@@ -736,10 +786,10 @@ fn val_max(a: &Val, b: &Val) -> Result<Val, LirError> {
         (Val::I32(x), Val::I64(y)) => Ok(Val::I64((*x as i64).max(*y))),
         (Val::I64(x), Val::I32(y)) => Ok(Val::I64((*x).max(*y as i64))),
         _ => Err(LirError::Runtime {
-            code: "R_INTERNAL_MAX",
+            code: "R_INDEX",
             span: Span::new(0, 0),
             message: "max mismatch".into(),
-            fix_hint: "".into(),
+            fix_hint: "Report a compiler bug.".into(),
             stage_index: 0,
             element_index: None,
         }),

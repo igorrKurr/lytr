@@ -2,13 +2,14 @@
 name = "lir"
 version = "0.1.0"
 edition = "2021"
-description = "LIR v1 reference interpreter and compiler front-end"
+description = "LYTR monorepo: LIR (fast data-processing language) toolchain; LYTR general-purpose language planned (docs/LYTR_GLOBAL_IMPLEMENTATION_PLAN.md)"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+tempfile = "3"
 
 [dev-dependencies]
-tempfile = "3"
+wasmi = "1.0.9"
 
 [[bin]]
 name = "lir"

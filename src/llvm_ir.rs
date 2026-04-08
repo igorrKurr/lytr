@@ -1,4 +1,4 @@
-//! LLVM IR (text) for a fused integer subset (`i32` / `i64` streams).
+//! LLVM IR (text) for `i32` / `i64` streams and `bool` streams (`i8` 0/1).
 //! `map` expressions are lowered recursively with checked overflow intrinsics.
 
 use crate::ast::{
@@ -11,6 +11,8 @@ const MAX_MATERIALIZED_LEN: usize = 1 << 20;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum IntWidth {
+    /// `i8` in LLVM (`true` → 1, `false` → 0).
+    W8,
     W32,
     W64,
 }
@@ -18,6 +20,7 @@ enum IntWidth {
 impl IntWidth {
     fn llvm_ty(self) -> &'static str {
         match self {
+            IntWidth::W8 => "i8",
             IntWidth::W32 => "i32",
             IntWidth::W64 => "i64",
         }
@@ -25,6 +28,7 @@ impl IntWidth {
 
     fn pair_ty(self) -> &'static str {
         match self {
+            IntWidth::W8 => "{ i8, i1 }",
             IntWidth::W32 => "{ i32, i1 }",
             IntWidth::W64 => "{ i64, i1 }",
         }
@@ -32,6 +36,7 @@ impl IntWidth {
 
     fn sadd_intrinsic(self) -> &'static str {
         match self {
+            IntWidth::W8 => "llvm.sadd.with.overflow.i8",
             IntWidth::W32 => "llvm.sadd.with.overflow.i32",
             IntWidth::W64 => "llvm.sadd.with.overflow.i64",
         }
@@ -39,6 +44,7 @@ impl IntWidth {
 
     fn ssub_intrinsic(self) -> &'static str {
         match self {
+            IntWidth::W8 => "llvm.ssub.with.overflow.i8",
             IntWidth::W32 => "llvm.ssub.with.overflow.i32",
             IntWidth::W64 => "llvm.ssub.with.overflow.i64",
         }
@@ -46,6 +52,7 @@ impl IntWidth {
 
     fn smul_intrinsic(self) -> &'static str {
         match self {
+            IntWidth::W8 => "llvm.smul.with.overflow.i8",
             IntWidth::W32 => "llvm.smul.with.overflow.i32",
             IntWidth::W64 => "llvm.smul.with.overflow.i64",
         }
@@ -53,6 +60,7 @@ impl IntWidth {
 
     fn align(self) -> u32 {
         match self {
+            IntWidth::W8 => 1,
             IntWidth::W32 => 4,
             IntWidth::W64 => 8,
         }
@@ -60,6 +68,7 @@ impl IntWidth {
 
     fn int_min_div(self) -> &'static str {
         match self {
+            IntWidth::W8 => "-128",
             IntWidth::W32 => "-2147483648",
             IntWidth::W64 => "-9223372036854775808",
         }
@@ -69,7 +78,11 @@ impl IntWidth {
 fn llvm_fn_ret_ty(width: IntWidth, reduce: ReduceOp) -> &'static str {
     match reduce {
         ReduceOp::Count => "i32",
-        _ => width.llvm_ty(),
+        _ => match width {
+            IntWidth::W8 => "i8",
+            IntWidth::W32 => "i32",
+            IntWidth::W64 => "i64",
+        },
     }
 }
 
@@ -122,6 +135,18 @@ pub fn emit_llvm_ir(p: &Program) -> Result<String, LirError> {
                 plan.scan,
             );
         }
+        PlanKind::ArrayI8 { elems } => {
+            emit_rodata_i8(&mut out, elems);
+            emit_array_main(
+                &mut out,
+                plan.width,
+                plan.reduce,
+                elems.len(),
+                &plan.pre_scan,
+                &plan.post_scan,
+                plan.scan,
+            );
+        }
     }
 
     out.push_str("\nattributes #0 = { nounwind }\n");
@@ -133,7 +158,7 @@ fn codegen_err(span: Span, msg: &str) -> LirError {
         code: "T_CODEGEN_UNSUPPORTED",
         span,
         message: msg.into(),
-        fix_hint: "Use input:i32|i64 or materialized range/lit, prefix take/drop, then filter/map/id in order, optional scan, then filter/map/id, reduce sum|prod|count|min|max.".into(),
+        fix_hint: "Use input:i32|i64|bool or materialized range/lit, prefix take/drop, then filter/map/id in order, optional scan, then filter/map/id, reduce sum|prod|count|min|max.".into(),
         stage_index: None,
     }
 }
@@ -151,6 +176,8 @@ enum PlanKind {
     Input { drop: u32, take: Option<u32> },
     ArrayI32 { elems: Vec<i32> },
     ArrayI64 { elems: Vec<i64> },
+    /// Boolean stream as `i8` 0/1.
+    ArrayI8 { elems: Vec<u8> },
 }
 
 fn compile_plan<'a>(p: &'a Program) -> Result<Plan<'a>, LirError> {
@@ -184,20 +211,7 @@ fn compile_plan<'a>(p: &'a Program) -> Result<Plan<'a>, LirError> {
 
     let src_ty = source_stream_ty(&p.source)?;
     let width = match src_ty {
-        ElemTy::Bool => {
-            let span = match &p.source {
-                Source::Lit { span, .. }
-                | Source::Input { span, .. }
-                | Source::Range { span, .. } => *span,
-            };
-            return Err(LirError::Type {
-                code: "T_CODEGEN_BOOL_STREAM",
-                span,
-                message: "LLVM emitter does not support bool streams".into(),
-                fix_hint: "Use integer streams.".into(),
-                stage_index: None,
-            });
-        }
+        ElemTy::Bool => IntWidth::W8,
         ElemTy::I32 => IntWidth::W32,
         ElemTy::I64 => IntWidth::W64,
     };
@@ -225,6 +239,12 @@ fn compile_plan<'a>(p: &'a Program) -> Result<Plan<'a>, LirError> {
                     return Err(codegen_err(
                         *span,
                         "LLVM path supports at most one scan stage",
+                    ));
+                }
+                if width == IntWidth::W8 {
+                    return Err(codegen_err(
+                        *span,
+                        "LLVM path does not support scan on bool streams",
                     ));
                 }
                 if width == IntWidth::W32
@@ -301,10 +321,27 @@ fn compile_plan<'a>(p: &'a Program) -> Result<Plan<'a>, LirError> {
             PlanKind::ArrayI32 { elems: vals }
         }
         Source::Lit { elems, span } => {
-            if elems.iter().any(|e| matches!(e, LitElem::Bool(_))) {
-                return Err(codegen_err(*span, "bool lit unsupported in LLVM emitter"));
-            }
             match width {
+                IntWidth::W8 => {
+                    let mut vals: Vec<u8> = elems
+                        .iter()
+                        .map(|e| match e {
+                            LitElem::Bool(b) => *b as u8,
+                            _ => unreachable!("typecheck: homogeneous bool lit"),
+                        })
+                        .collect();
+                    apply_drop_take_u8(&mut vals, drop_acc, take_acc);
+                    if vals.len() > MAX_MATERIALIZED_LEN {
+                        return Err(LirError::Type {
+                            code: "T_CODEGEN_TOO_LARGE",
+                            span: *span,
+                            message: "lit too large".into(),
+                            fix_hint: "Use a smaller lit().".into(),
+                            stage_index: None,
+                        });
+                    }
+                    PlanKind::ArrayI8 { elems: vals }
+                }
                 IntWidth::W32 => {
                     let mut vals = Vec::new();
                     for e in elems {
@@ -446,11 +483,43 @@ fn apply_drop_take_i64(vals: &mut Vec<i64>, drop: u32, take: Option<u32>) {
     }
 }
 
+fn apply_drop_take_u8(vals: &mut Vec<u8>, drop: u32, take: Option<u32>) {
+    let d = drop as usize;
+    if d >= vals.len() {
+        vals.clear();
+    } else {
+        vals.drain(0..d);
+    }
+    if let Some(t) = take {
+        let t = t as usize;
+        if vals.len() > t {
+            vals.truncate(t);
+        }
+    }
+}
+
+/// Host-controlled triple must not break IR quoting or inject structure; only conservative chars.
+fn llvm_triple_from_env() -> String {
+    match std::env::var("LIR_LLVM_TRIPLE") {
+        Ok(s) if llvm_triple_is_safe(&s) => s,
+        Ok(_) | Err(_) => "unknown-unknown-unknown".into(),
+    }
+}
+
+fn llvm_triple_is_safe(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 128
+        && s.is_ascii()
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_'))
+}
+
 fn emit_prelude(out: &mut String) {
     use std::fmt::Write;
+    let triple = llvm_triple_from_env();
     let _ = writeln!(out, "; LIR v1 — generated LLVM IR");
     let _ = writeln!(out, "target datalayout = \"e-m:e-i64:64-f80:128-n8:16:32:64-S128\"");
-    let _ = writeln!(out, "target triple = \"unknown-unknown-unknown\"");
+    let _ = writeln!(out, "target triple = \"{triple}\"");
     let _ = writeln!(out);
     let _ = writeln!(out, "declare void @llvm.trap() cold noreturn nounwind");
     let _ = writeln!(out, "declare {{ i32, i1 }} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone speculatable");
@@ -459,6 +528,9 @@ fn emit_prelude(out: &mut String) {
     let _ = writeln!(out, "declare {{ i64, i1 }} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable");
     let _ = writeln!(out, "declare {{ i64, i1 }} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable");
     let _ = writeln!(out, "declare {{ i64, i1 }} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable");
+    let _ = writeln!(out, "declare {{ i8, i1 }} @llvm.sadd.with.overflow.i8(i8, i8) nounwind readnone speculatable");
+    let _ = writeln!(out, "declare {{ i8, i1 }} @llvm.ssub.with.overflow.i8(i8, i8) nounwind readnone speculatable");
+    let _ = writeln!(out, "declare {{ i8, i1 }} @llvm.smul.with.overflow.i8(i8, i8) nounwind readnone speculatable");
     let _ = writeln!(out);
 }
 
@@ -491,6 +563,22 @@ fn emit_rodata_i64(out: &mut String, elems: &[i64]) {
         );
     }
     let _ = writeln!(out, "], align 8");
+    let _ = writeln!(out);
+}
+
+fn emit_rodata_i8(out: &mut String, elems: &[u8]) {
+    use std::fmt::Write;
+    let n = elems.len();
+    let _ = writeln!(out, "@lir_data = private unnamed_addr constant [{n} x i8] [", n = n);
+    for (i, v) in elems.iter().enumerate() {
+        let _ = writeln!(
+            out,
+            "  i8 {}{}",
+            v,
+            if i + 1 < n { "," } else { "" }
+        );
+    }
+    let _ = writeln!(out, "], align 1");
     let _ = writeln!(out);
 }
 
@@ -662,6 +750,7 @@ fn emit_scan_pre(
     use std::fmt::Write;
     let ty = width.llvm_ty();
     let init_lit = match width {
+        IntWidth::W8 => format!("{}", init as i8),
         IntWidth::W32 => format!("{}", init as i32),
         IntWidth::W64 => format!("{}", init),
     };
@@ -733,6 +822,7 @@ fn emit_loop_core(
     let acc_ty = llvm_fn_ret_ty(width, reduce);
     let al = width.align();
     let scan_init_lit = scan.map(|(i, _)| match width {
+        IntWidth::W8 => format!("{}", i as i8),
         IntWidth::W32 => format!("{}", i as i32),
         IntWidth::W64 => format!("{}", i),
     });
@@ -1093,16 +1183,9 @@ impl<'a> IrCg<'a> {
             let _ = writeln!(self.out, "{}:", lbl);
             match op {
                 PipelineOp::Filter(p) => {
-                    let pred = self.predicate_one(p, &cur);
                     skip_blocks.push(lbl.clone());
                     let ok_lbl = format!("pl_{}", self.fresh());
-                    let _ = writeln!(
-                        self.out,
-                        "  br i1 {pred}, label %{ok}, label %{fail}",
-                        pred = pred,
-                        ok = ok_lbl,
-                        fail = fail_label
-                    );
+                    self.emit_predicate_branch(p, &cur, &ok_lbl, fail_label);
                     if i + 1 == ops.len() {
                         let _ = writeln!(self.out, "{}:", ok_lbl);
                         let _ = writeln!(self.out, "  br label %{succ}", succ = succ_label);
@@ -1127,6 +1210,9 @@ impl<'a> IrCg<'a> {
 
     fn emit_scan_step(&mut self, op: ScanOp, acc: &str, y: &str) -> String {
         let intr = match (self.w, op) {
+            (IntWidth::W8, ScanOp::Add) => "llvm.sadd.with.overflow.i8",
+            (IntWidth::W8, ScanOp::Sub) => "llvm.ssub.with.overflow.i8",
+            (IntWidth::W8, ScanOp::Mul) => "llvm.smul.with.overflow.i8",
             (IntWidth::W32, ScanOp::Add) => "llvm.sadd.with.overflow.i32",
             (IntWidth::W32, ScanOp::Sub) => "llvm.ssub.with.overflow.i32",
             (IntWidth::W32, ScanOp::Mul) => "llvm.smul.with.overflow.i32",
@@ -1137,7 +1223,40 @@ impl<'a> IrCg<'a> {
         self.checked_binop(intr, acc, y)
     }
 
-    fn predicate_one(&mut self, p: &Predicate, x: &str) -> String {
+    /// §8: `filter` lowers `&` and `or` with left-to-right short-circuit (LLVM control flow).
+    fn emit_predicate_branch(&mut self, p: &Predicate, x: &str, ok_lbl: &str, fail_lbl: &str) {
+        use std::fmt::Write;
+        match p {
+            Predicate::And { left, right, .. } => {
+                let mid = format!("pl_{}", self.fresh());
+                self.emit_predicate_branch(left, x, &mid, fail_lbl);
+                let _ = writeln!(self.out, "{}:", mid);
+                self.emit_predicate_branch(right, x, ok_lbl, fail_lbl);
+            }
+            Predicate::Or { left, right, .. } => {
+                let mid = format!("pl_{}", self.fresh());
+                self.emit_predicate_branch(left, x, ok_lbl, &mid);
+                let _ = writeln!(self.out, "{}:", mid);
+                self.emit_predicate_branch(right, x, ok_lbl, fail_lbl);
+            }
+            Predicate::Not { inner, .. } => {
+                self.emit_predicate_branch(inner, x, fail_lbl, ok_lbl);
+            }
+            _ => {
+                let reg = self.predicate_atom_i1(p, x);
+                let _ = writeln!(
+                    self.out,
+                    "  br i1 {reg}, label %{ok}, label %{fail}",
+                    reg = reg,
+                    ok = ok_lbl,
+                    fail = fail_lbl
+                );
+            }
+        }
+    }
+
+    /// Leaf predicate as a single `i1` SSA value (no terminator).
+    fn predicate_atom_i1(&mut self, p: &Predicate, x: &str) -> String {
         use std::fmt::Write;
         let et = self.w.llvm_ty();
         match p {
@@ -1155,64 +1274,72 @@ impl<'a> IrCg<'a> {
                 let _ = writeln!(self.out, "  %{b} = icmp ne {et} %{a}, 0", et = et);
                 format!("%{}", b)
             }
-            Predicate::Cmp { op, rhs, .. } => {
-                let CmpRhs::Int(v) = rhs else {
-                    let t = self.fresh();
-                    let _ = writeln!(self.out, "  %{t} = icmp eq i32 0, 1");
-                    return format!("%{}", t);
-                };
-                let (ok, rhs_lit) = match self.w {
-                    IntWidth::W32 => {
-                        if *v < i32::MIN as i64 || *v > i32::MAX as i64 {
-                            (false, String::new())
-                        } else {
-                            (true, format!("{}", *v as i32))
-                        }
+            Predicate::Cmp { op, rhs, .. } => match (self.w, rhs) {
+                (IntWidth::W8, CmpRhs::Bool(want)) => {
+                    if !matches!(op, CmpOp::Eq) {
+                        let t = self.fresh();
+                        let _ = writeln!(self.out, "  %{t} = icmp eq i32 0, 1");
+                        return format!("%{}", t);
                     }
-                    IntWidth::W64 => (true, format!("{}", *v)),
-                };
-                if !ok {
+                    let rhs_lit = if *want { 1 } else { 0 };
+                    let t = self.fresh();
+                    let _ = writeln!(
+                        self.out,
+                        "  %{t} = icmp eq {et} {x}, {rhs_lit}",
+                        et = et,
+                        x = x,
+                        rhs_lit = rhs_lit
+                    );
+                    format!("%{}", t)
+                }
+                (IntWidth::W8, CmpRhs::Int(_)) => {
                     let t = self.fresh();
                     let _ = writeln!(self.out, "  %{t} = icmp eq i32 0, 1");
-                    return format!("%{}", t);
+                    format!("%{}", t)
                 }
-                let icmp = match op {
-                    CmpOp::Eq => "eq",
-                    CmpOp::Lt => "slt",
-                    CmpOp::Le => "sle",
-                    CmpOp::Gt => "sgt",
-                    CmpOp::Ge => "sge",
-                };
-                let t = self.fresh();
-                let _ = writeln!(
-                    self.out,
-                    "  %{t} = icmp {icmp} {et} {x}, {rhs}",
-                    icmp = icmp,
-                    et = et,
-                    x = x,
-                    rhs = rhs_lit
-                );
-                format!("%{}", t)
-            }
-            Predicate::Not { inner, .. } => {
-                let i = self.predicate_one(inner, x);
-                let t = self.fresh();
-                let _ = writeln!(self.out, "  %{t} = xor i1 {i}, true", i = i);
-                format!("%{}", t)
-            }
-            Predicate::And { left, right, .. } => {
-                let a = self.predicate_one(left, x);
-                let b = self.predicate_one(right, x);
-                let t = self.fresh();
-                let _ = writeln!(self.out, "  %{t} = and i1 {a}, {b}", a = a, b = b);
-                format!("%{}", t)
-            }
-            Predicate::Or { left, right, .. } => {
-                let a = self.predicate_one(left, x);
-                let b = self.predicate_one(right, x);
-                let t = self.fresh();
-                let _ = writeln!(self.out, "  %{t} = or i1 {a}, {b}", a = a, b = b);
-                format!("%{}", t)
+                (_, CmpRhs::Bool(_)) => {
+                    let t = self.fresh();
+                    let _ = writeln!(self.out, "  %{t} = icmp eq i32 0, 1");
+                    format!("%{}", t)
+                }
+                (_, CmpRhs::Int(v)) => {
+                    let (ok, rhs_lit) = match self.w {
+                        IntWidth::W8 => (false, String::new()),
+                        IntWidth::W32 => {
+                            if *v < i32::MIN as i64 || *v > i32::MAX as i64 {
+                                (false, String::new())
+                            } else {
+                                (true, format!("{}", *v as i32))
+                            }
+                        }
+                        IntWidth::W64 => (true, format!("{}", *v)),
+                    };
+                    if !ok {
+                        let t = self.fresh();
+                        let _ = writeln!(self.out, "  %{t} = icmp eq i32 0, 1");
+                        return format!("%{}", t);
+                    }
+                    let icmp = match op {
+                        CmpOp::Eq => "eq",
+                        CmpOp::Lt => "slt",
+                        CmpOp::Le => "sle",
+                        CmpOp::Gt => "sgt",
+                        CmpOp::Ge => "sge",
+                    };
+                    let t = self.fresh();
+                    let _ = writeln!(
+                        self.out,
+                        "  %{t} = icmp {icmp} {et} {x}, {rhs}",
+                        icmp = icmp,
+                        et = et,
+                        x = x,
+                        rhs = rhs_lit
+                    );
+                    format!("%{}", t)
+                }
+            },
+            Predicate::And { .. } | Predicate::Or { .. } | Predicate::Not { .. } => {
+                unreachable!("emit_predicate_branch handles compound predicates")
             }
         }
     }
@@ -1229,6 +1356,13 @@ impl<'a> IrCg<'a> {
                 }
             }
             Expr::Lit { v, .. } => match self.w {
+                IntWidth::W8 => {
+                    if *v < i8::MIN as i64 || *v > i8::MAX as i64 {
+                        "0".into()
+                    } else {
+                        format!("{}", *v as i8)
+                    }
+                }
                 IntWidth::W32 => {
                     if *v < i32::MIN as i64 || *v > i32::MAX as i64 {
                         "0".into()
@@ -1399,6 +1533,27 @@ impl<'a> IrCg<'a> {
             ok = ok
         );
         let _ = writeln!(self.out, "md_{ok}:", ok = ok);
+        let bad = self.fresh();
+        let bad2 = self.fresh();
+        let bad3 = self.fresh();
+        let ok2 = self.fresh();
+        let min = self.w.int_min_div();
+        let _ = writeln!(
+            self.out,
+            "  %{bad} = icmp eq {et} {a}, {min}",
+            et = et,
+            a = a,
+            min = min
+        );
+        let _ = writeln!(self.out, "  %{bad2} = icmp eq {et} {b}, -1", et = et, b = b);
+        let _ = writeln!(self.out, "  %{bad3} = and i1 %{bad}, %{bad2}");
+        let _ = writeln!(
+            self.out,
+            "  br i1 %{bad3}, label %trap_ov, label %md2_{ok2}",
+            bad3 = bad3,
+            ok2 = ok2
+        );
+        let _ = writeln!(self.out, "md2_{ok2}:", ok2 = ok2);
         let r = self.fresh();
         let _ = writeln!(
             self.out,

@@ -106,13 +106,22 @@ pub fn lex(body: &str) -> Result<Vec<Lexeme>, LirError> {
                     i += 1;
                 }
                 let s = std::str::from_utf8(&bytes[num_start..i]).unwrap();
-                let v: i64 = s.parse().map_err(|_| LirError::Syntax {
+                let v128: i128 = s.parse().map_err(|_| LirError::Syntax {
                     code: "E_INT_PARSE",
                     span: Span::new(start, i),
                     message: format!("invalid integer literal `{s}`"),
                     fix_hint: "Use a decimal integer literal.".into(),
                 })?;
-                let v = if neg { -v } else { v };
+                let v128 = if neg { -v128 } else { v128 };
+                if v128 < i64::MIN as i128 || v128 > i64::MAX as i128 {
+                    return Err(LirError::Syntax {
+                        code: "E_INT_RANGE",
+                        span: Span::new(start, i),
+                        message: format!("integer literal `{}{s}` is out of i64 range", if neg { "-" } else { "" }),
+                        fix_hint: "Use a value that fits in signed 64 bits.".into(),
+                    });
+                }
+                let v = v128 as i64;
                 out.push(Lexeme {
                     tok: Token::Int(v),
                     span: Span::new(start, i),
