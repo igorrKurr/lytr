@@ -14,11 +14,11 @@ pub mod types;
 pub mod wasm;
 
 pub use ast::Program;
-pub use error::{LirError, Span};
-pub use format::format_program;
+pub use error::{cli_json_line, LirError, Span};
+pub use format::{format_program, program_is_canonical_text};
 pub use input_parse::parse_input_array;
 pub use interp::{run_program, RunOutcome, Val};
 pub use parse::parse_program;
 pub use types::{check_program, source_stream_ty};
-pub use llvm_ir::emit_llvm_ir;
+pub use llvm_ir::{codegen_supported, emit_llvm_ir};
 pub use wasm::{adapt_llvm_ir_for_wasm, emit_wasm, wasm_clang_target_ok};

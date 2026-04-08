@@ -6,6 +6,8 @@
 
 **Goal:** Maximize effectiveness of the full chain **user → LLM → program → computation → hardware**: **precision** (correct programs, few silent errors), **pipeline cost** (tokens and retries until success), and **hardware performance** (predictable, fast execution). The final *surface syntax* is secondary; **sugar/desugar** are justified only when they improve this chain.
 
+**Production / GA:** Completing Phases 0–10 is **not** sufficient for a **tier-1 production** language. **[LYTR_PRODUCTION_READINESS.md](LYTR_PRODUCTION_READINESS.md)** defines **mandatory GA gates (G1–G12)**; **§11** below schedules the **production tracks** that close those gaps. See also **[LYTR_GOALS_AND_TIERS.md](LYTR_GOALS_AND_TIERS.md)** (agent-optimal vs ecosystem product).
+
 **Non-goals:** Redesigning general-purpose programming for novelty alone; maximizing brevity of symbols at the expense of model success rate.
 
 ---
@@ -226,6 +228,8 @@ Phases **interleave** foundation (**LIR** + tooling + eval), **LYTR**, and **per
 
 - Spec section + tests + **eval tasks** that use concurrency v1.
 
+**Follow-up:** The **second** concurrency model (async *or* threads — whichever was deferred) ships under **§11 P13 (Phase 7b)** with a new edition or preview flag, so production codebases can use **both** I/O and CPU parallelism without undefined interaction.
+
 ---
 
 ### Phase 8 — LYTR compiler backend + LIR embed (weeks 22–40)
@@ -323,10 +327,15 @@ Phase 8 + eval ────► Phase 10 (JIT/SIMD)         │
 | Risk | Mitigation |
 |------|------------|
 | LYTR and LIR semantics drift | Shared tests; **B4** embed path; one numeric/trap story |
-| Spec and impl explode | **Charter non-goals**; **editioned** language versions |
+| Spec and impl explode | **Charter non-goals**; **editioned** language versions; [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) appendix B |
 | GC pauses vs “top notch” | **Incremental** GC later; **explicit** sublanguage for hot paths if hybrid |
 | Two IRs confuse tools | **One schema namespace**; LIR as `kind: "lir"` (or equivalent) inside unified AST |
 | Eval not run | CI job runs **subset** of eval nightly; block regressions on critical tasks |
+| **LIR dual truth** (interp full vs codegen subset) confuses users | [LIR_PRODUCT_STRATEGY.md](LIR_PRODUCT_STRATEGY.md); diagnostics + **G10** before GA |
+| **LLVM / GC** complexity underestimation | Prototype early (Phase 6); consider **Cranelift** fork for some tiers if LLVM GC blocks |
+| **Stdlib security** liability | [LYTR_STDLIB_CHARTER_DRAFT.md](LYTR_STDLIB_CHARTER_DRAFT.md); no ambient network in Tier 0 |
+| **Concurrency v2** needed soon after v1 | Plan **Phase 7b** (§11 P13) explicitly — second model in next edition |
+| **Supply-chain** incident | [LYTR_QUALITY_AND_SECURITY.md](LYTR_QUALITY_AND_SECURITY.md); SBOM + signed releases |
 
 ---
 
@@ -341,16 +350,21 @@ Record **date**, **decision**, **alternatives rejected**, **metric or principle*
 | D3 | LYTR v1 workload scope (scripts only vs +services) | TBD | Open |
 | D4 | Model strategy: inference-only vs fine-tune | TBD | Open |
 | D5 | Bootstrap: Rust host vs self-host timeline | TBD | Open |
+| D6 | LIR strategy: widen codegen vs `lir/2` vs naming SKUs ([LIR_PRODUCT_STRATEGY.md](LIR_PRODUCT_STRATEGY.md)) | TBD | Open |
+| D7 | LYTR edition banner format (`lytr/1` vs year) | TBD | Open |
+| D8 | Package manifest name (`Lytr.toml` vs `lytr.toml`) | TBD | Open |
+| D9 | Debugger path: lldb-only vs DAP server | TBD | Open |
+| D10 | Fuzz engine + time budget in CI | TBD | Open |
 
 ---
 
 ## 9. Immediate next actions (first 30 days)
 
-1. **Phase 0:** CI cross-checks interp / LLVM / WASM on all codegen-subset tests; optional `--supported` style reporting; subset JSON.
-2. **Phase 1:** `fmt --check`; error JSON audit; `AGENTS.md` + cheat sheet.
-3. **Phase 3 (skeleton):** `eval/` with ≥10 tasks + runner + log format.
-4. **Phase 5 (paper):** LYTR charter + B1 grammar/types draft.
-5. **Phase 6 (paper):** C1 decision memo draft (options matrix, no commitment until B1 types sketched).
+1. **Phase 0 (done in repo):** Subset JSON [`codegen_subset.json`](codegen_subset.json); `lir codegen-check`; tests assert `codegen_supported` ↔ `emit_llvm_ir`; CI keeps interp / LLVM / WASM goldens + eval smoke.
+2. **Phase 1 (done in repo):** `lir fmt --check`; broader CLI JSON lines (`cli_json_line`); [`AGENTS.md`](../AGENTS.md).
+3. **Phase 3 (skeleton):** [`eval/README.md`](../eval/README.md), `eval/run_local.sh`, three starter tasks — extend task list and add LLM runner when ready.
+4. **Phase 5 (paper started):** [`LYTR_CHARTER_DRAFT.md`](LYTR_CHARTER_DRAFT.md); B1 grammar/types still to draft.
+5. **Phase 6 (paper started):** [`LYTR_MEMORY_OPTIONS_DRAFT.md`](LYTR_MEMORY_OPTIONS_DRAFT.md); formal decision still open (§8).
 
 ---
 
@@ -358,7 +372,118 @@ Record **date**, **decision**, **alternatives rejected**, **metric or principle*
 
 - Update this plan when **phases complete** or **gates** change.
 - Link new ADRs or decision records from §8.
-- Keep [LIR_V1_SPEC.md](LIR_V1_SPEC.md) and [LLVM_ABI.md](LLVM_ABI.md) as **normative** for LIR; LYTR should gain **`docs/LYTR_*.md`** as it materializes.
+- Keep [LIR_V1_SPEC.md](LIR_V1_SPEC.md) and [LLVM_ABI.md](LLVM_ABI.md) as **normative** for LIR.
+- **Production / GA** index: [LYTR_PRODUCTION_READINESS.md](LYTR_PRODUCTION_READINESS.md); full doc set listed in [NAMING.md](NAMING.md).
+
+---
+
+## 11. Production tracks (GA path — Phases P11–P16)
+
+These tracks close **[LYTR_PRODUCTION_READINESS.md](LYTR_PRODUCTION_READINESS.md)** gates **G1–G12**. They run **in parallel** with Phases 5–10 once LYTR syntax exists; some artifacts (semantics drafts) can start **before** implementation.
+
+### P11 — Semantics, UB, FFI documentation (→ G1, G2)
+
+**Work:** Evolve [LYTR_SEMANTICS_AND_UB_DRAFT.md](LYTR_SEMANTICS_AND_UB_DRAFT.md) into normative **`LYTR_SPEC.md`** + **`UB.md`** + **`FFI.md`**; align runtime error JSON with spec codes.
+
+**Exit:** Reviewed document set; no open “TBD semantics” for shipped v0.1 surface.
+
+---
+
+### P12 — Stdlib implementation per charter (→ G3)
+
+**Work:** Implement [LYTR_STDLIB_CHARTER_DRAFT.md](LYTR_STDLIB_CHARTER_DRAFT.md) **Tier 0 → Tier 1** for GA-minimal; API reference generated.
+
+**Exit:** Charter checklist 100% for declared tier; crypto/network out-of-scope unless charter updated.
+
+---
+
+### P13 — Concurrency second model (→ production reality)
+
+**Work:** After Phase 7’s **single** v1 model ships, add **Phase 7b**: the **other** model (async *or* threads) under a **new edition** or **preview** flag — documented interaction with memory model (D1).
+
+**Exit:** Spec + tests + eval tasks; no conflicting undefined behavior across models.
+
+---
+
+### P14 — Platform, packages, editions (→ G4, G6)
+
+**Work:** Implement [LYTR_PLATFORM_AND_EDITIONS_DRAFT.md](LYTR_PLATFORM_AND_EDITIONS_DRAFT.md): manifest, lockfile, `lytr build`, workspace mode (optional for GA), cross-target tiers.
+
+**Exit:** Reproducible third-party project builds; edition + deprecation warnings in compiler.
+
+---
+
+### P15 — IDE tooling (→ G5, G12)
+
+**Work:** [LYTR_TOOLING_TRACK.md](LYTR_TOOLING_TRACK.md): LSP-0…LSP-2 minimum for GA; **one** documented debug path (lldb or DAP).
+
+**Exit:** VS Code / Cursor extension or documented `lytr lsp` + editor config; GA gate G12 satisfied.
+
+---
+
+### P16 — Quality, fuzz, perf CI, security (→ G7, G8, G9)
+
+**Work:** [LYTR_QUALITY_AND_SECURITY.md](LYTR_QUALITY_AND_SECURITY.md): fuzz jobs, perf benchmark suite with thresholds, SBOM + signed releases + dependency audit in CI.
+
+**Exit:** GA gates G7–G9; release checklist in production readiness doc runnable.
+
+---
+
+### Dependency addendum
+
+```
+Phase 2 (AST) ─────────────► P15 (LSP)
+Phase 5–8 (LYTR core) ─────► P11 (semantics), P12 (stdlib), P14 (packages)
+Phase 6–7 (memory+conc) ───► P11 (UB/concurrency docs), P13 (7b)
+Phase 3–4 (eval) ──────────► P16 (eval security + adversarial tasks)
+P14 + P15 + P16 ───────────► GA (with G1–G12 all green)
+```
+
+---
+
+## 12. Summary: phase map to products
+
+| Phases | Delivers |
+|--------|----------|
+| **0–4** | Tier **A** foundation (agents, eval, LIR tooling) |
+| **5–10** | LYTR compiler core + runtime direction |
+| **P11–P16** | Tier **B** production ecosystem + GA |
+
+---
+
+## 13. Ordered backlog (dependency order + rough quarters)
+
+Single sequencing view merging **Phases 0–10** and **§11 P11–P16**. Quarters are **relative Year 1 / Year 2** from “project start” (adjust to your calendar). Items on the **same row** can run in parallel if staffed.
+
+| Seq | Work item | Hard deps | Target |
+|-----|-----------|-----------|--------|
+| 1 | Phase **0** — semantic truth, codegen subset, CI oracles | — | **Y1 Q1** (maintain ongoing) |
+| 2 | Phase **1** — LLM-first CLI, `fmt --check`, JSON errors | — | **Y1 Q1** (maintain ongoing) |
+| 3 | Phase **3** — eval harness skeleton → grow task set | 1–2 | **Y1 Q1** start |
+| 4 | Phase **2** — AST schema, `dump-ast` / `apply-ast`, round-trip | 1 (stabilize LIR surface) | **Y1 Q2** |
+| 5 | **P11** (draft) — semantics / UB / FFI skeleton | 4 (optional), 6 (LYTR surface) | **Y1 Q1–Q2** start drafts |
+| 6 | Phase **5** — B0 charter, B1 core calculus (paper + minimal impl) | — | **Y1 Q2** |
+| 7 | Phase **6** — C1 memory decision + allocator prototype | 6 (B1 type layout sketch) | **Y1 Q2–Q3** |
+| 8 | Phase **5** B2 — effects + IO/FFI v1 design | 6 | **Y1 Q3** |
+| 9 | Phase **7** — concurrency v1 | 7, 8 | **Y1 Q3** |
+| 10 | Phase **8** — LYTR → LLVM/WASM + **B4** LIR embed | 6–9 | **Y1 Q3–Q4** |
+| 11 | **P16** (bootstrap) — fuzz smoke, perf smoke, `cargo deny`-class audit | 1 | **Y1 Q2** start; harden **Y1 Q4** |
+| 12 | **P12** — stdlib Tier 0 → Tier 1 per charter | 7, 8, 10 (for linking) | **Y1 Q3–Y2 Q1** |
+| 13 | Phase **4** — evidence-driven surface tuning | 3 | **Y1 Q3** onward |
+| 14 | Phase **9** + **P14** — incremental compile, manifest, lockfile, `lytr build` | 10 | **Y1 Q4** |
+| 15 | **P15** — LSP-0/1 (diagnostics, fmt, go-to-def local) | 4, 6 (parser) | **Y1 Q4** |
+| 16 | **P11** (normative) — freeze `LYTR_SPEC` / UB / FFI for shipped surface | 6, 7, 8, 9 | **Y2 Q1** |
+| 17 | **P15** — LSP-2, debugger path (**G12**) | 14 (packages help refs) | **Y2 Q1** |
+| 18 | **P13** (Phase **7b**) — second concurrency model + edition | 9 | **Y2 Q1** |
+| 19 | **P16** (GA) — SBOM, signed releases, perf budgets blocking | 11–17 | **Y2 Q1–Q2** |
+| 20 | **GA review** — [LYTR_PRODUCTION_READINESS.md](LYTR_PRODUCTION_READINESS.md) G1–G12 | 16–19 | **Y2 Q2** |
+| 21 | Phase **10** — JIT / SIMD / deeper fusion | metrics + 10 stable | **Y2 Q2+** optional |
+
+**Critical path (longest typical chain):** 1 → 2 → 6 → 7 → 8 → 9 → 10 → 14 → 16 → 19 → 20.
+
+**Parallelization:** 3–4–5–11 early; **P12** overlaps **10**; **P15** follows **4** + parser work; **P13** only after **9** to avoid two concurrent concurrency designs.
+
+**Tier A preview:** Can ship after **1–3–6 (minimal B1)** + interpreter path without waiting for **20** (full GA).
 
 ---
 

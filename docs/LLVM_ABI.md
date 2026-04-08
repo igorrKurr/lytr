@@ -46,6 +46,8 @@ Overflow, division by zero, and empty `min`/`max` lower to **`llvm.trap()`** (pl
 
 Examples **outside** the subset (they still type-check and run in the interpreter): `take` / `drop` after **`map`**; **`scan`**, then **`take`**; two **`scan`** stages.
 
+Machine-readable summary: [codegen_subset.json](codegen_subset.json). CLI probe: `lir codegen-check <file.lir>`.
+
 ## Environment
 
 - **`LIR_LLVM_TRIPLE`**: if set to a **safe** value (ASCII, ≤128 chars, only letters, digits, `-`, `.`, `_`), overrides the emitted `target triple`. Otherwise the emitter falls back to `unknown-unknown-unknown` (avoids breaking IR text or downstream tools).

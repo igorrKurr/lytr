@@ -16,6 +16,12 @@ pub fn format_program(p: &Program) -> String {
     out
 }
 
+/// True if `src` equals the canonical §11 formatting of `prog` (after normalizing CRLF → LF).
+pub fn program_is_canonical_text(src: &str, prog: &Program) -> bool {
+    let normalized = src.replace("\r\n", "\n");
+    format_program(prog) == normalized
+}
+
 fn format_source(s: &Source) -> String {
     match s {
         Source::Input { ty, .. } => {

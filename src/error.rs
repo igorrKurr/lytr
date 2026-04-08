@@ -85,6 +85,14 @@ impl fmt::Display for LirError {
     }
 }
 
+/// JSON line for CLI / agent misuse (not a [`LirError`] from the language).
+pub fn cli_json_line(code: &'static str, message: &str) -> String {
+    format!(
+        r#"{{"kind":"cli","code":"{code}","message":{}}}"#,
+        serde_json_escape(message)
+    )
+}
+
 impl LirError {
     pub fn to_json_line(&self) -> String {
         // Minimal JSON envelope for tooling / LLM loops.

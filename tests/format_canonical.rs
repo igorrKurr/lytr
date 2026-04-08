@@ -1,4 +1,4 @@
-use lir::{format_program, parse_program};
+use lir::{format_program, parse_program, program_is_canonical_text};
 
 #[test]
 fn bare_input_becomes_explicit_i32() {
@@ -35,4 +35,19 @@ fn range_two_arg_default_step() {
     let p = parse_program(src).unwrap();
     let out = format_program(&p);
     assert!(out.contains("range ( 0 , 3 )"));
+}
+
+#[test]
+fn program_is_canonical_text_accepts_roundtrip_output() {
+    let src = "lir/1\ninput:i32 | reduce count\n";
+    let p = parse_program(src).unwrap();
+    let canon = format_program(&p);
+    assert!(program_is_canonical_text(&canon, &p));
+}
+
+#[test]
+fn program_is_canonical_text_rejects_compressed_spacing() {
+    let src = "lir/1\nrange(0,3)|reduce count";
+    let p = parse_program(src).unwrap();
+    assert!(!program_is_canonical_text(src, &p));
 }

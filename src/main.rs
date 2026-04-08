@@ -5,8 +5,8 @@ use std::process::ExitCode;
 use lir::interp::{RunOutcome, Val};
 use lir::ast::ElemTy;
 use lir::{
-    check_program, emit_llvm_ir, emit_wasm, format_program, parse_input_array, parse_program,
-    run_program, source_stream_ty,
+    check_program, cli_json_line, codegen_supported, emit_llvm_ir, emit_wasm, format_program,
+    parse_input_array, parse_program, program_is_canonical_text, run_program, source_stream_ty,
 };
 
 fn main() -> ExitCode {
@@ -31,7 +31,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 "lir check <file.lir>\n\nParse and type-check only; prints `ok` on success."
             ),
             Some("fmt") => eprintln!(
-                "lir fmt <file.lir>\n\nParse and print canonical formatting (§11) to stdout."
+                "lir fmt [--check] <file.lir>\n\nPrint canonical formatting (§11) to stdout, or with --check verify file is already canonical (exit 1 if not)."
+            ),
+            Some("codegen-check") => eprintln!(
+                "lir codegen-check <file.lir>\n\nParse, type-check, and verify the program is in the LLVM/WASM codegen subset (see docs/codegen_subset.json)."
             ),
             Some(topic) => eprintln!("No detailed help for `{topic}`. Try `lir help` or `lir help compile`."),
         }
@@ -40,14 +43,33 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
 
     match cmd {
         "fmt" => {
-            let Some(path) = args.get(1) else {
-                eprintln!("missing file path");
-                return ExitCode::from(2);
+            let (check_only, path) = match args.get(1).map(String::as_str) {
+                Some("--check") => (
+                    true,
+                    match args.get(2) {
+                        Some(p) => p,
+                        None => {
+                            eprintln!("usage: lir fmt [--check] <file.lir>");
+                            eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
+                            return ExitCode::from(2);
+                        }
+                    },
+                ),
+                Some(_) => (false, args.get(1).unwrap()),
+                None => {
+                    eprintln!("usage: lir fmt [--check] <file.lir>");
+                    eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
+                    return ExitCode::from(2);
+                }
             };
             let src = match fs::read_to_string(path) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
                     return ExitCode::from(1);
                 }
             };
@@ -59,7 +81,62 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                     return ExitCode::from(1);
                 }
             };
-            print!("{}", format_program(&prog));
+            if check_only {
+                if program_is_canonical_text(&src, &prog) {
+                    println!("ok");
+                    ExitCode::SUCCESS
+                } else {
+                    eprintln!("not formatted (run `lir fmt` without --check to print canonical source)");
+                    eprintln!(
+                        "{}",
+                        cli_json_line(
+                            "E_FMT_CHECK",
+                            "source differs from canonical §11 formatting",
+                        )
+                    );
+                    return ExitCode::from(1);
+                }
+            } else {
+                print!("{}", format_program(&prog));
+                ExitCode::SUCCESS
+            }
+        }
+        "codegen-check" => {
+            let Some(path) = args.get(1) else {
+                eprintln!("usage: lir codegen-check <file.lir>");
+                eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
+                return ExitCode::from(2);
+            };
+            let src = match fs::read_to_string(path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
+                    return ExitCode::from(1);
+                }
+            };
+            let prog = match parse_program(&src) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("{e}");
+                    eprintln!("{}", e.to_json_line());
+                    return ExitCode::from(1);
+                }
+            };
+            if let Err(e) = check_program(&prog) {
+                eprintln!("{e}");
+                eprintln!("{}", e.to_json_line());
+                return ExitCode::from(1);
+            }
+            if let Err(e) = codegen_supported(&prog) {
+                eprintln!("{e}");
+                eprintln!("{}", e.to_json_line());
+                return ExitCode::from(1);
+            }
+            println!("ok");
             ExitCode::SUCCESS
         }
         "wasm" => {
@@ -68,6 +145,7 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 Ok(p) => p,
                 Err(e) => {
                     eprintln!("{e}");
+                    eprintln!("{}", cli_json_line("E_CLI_ARGS", &e));
                     return ExitCode::from(2);
                 }
             };
@@ -75,6 +153,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
                     return ExitCode::from(1);
                 }
             };
@@ -101,6 +183,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
             };
             if let Err(e) = fs::write(&out_path, bytes) {
                 eprintln!("write {out_path}: {e}");
+                eprintln!(
+                    "{}",
+                    cli_json_line("E_IO", &format!("write {out_path}: {e}"))
+                );
                 return ExitCode::from(1);
             }
             println!("wrote {}", out_path);
@@ -112,6 +198,7 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 Ok(p) => p,
                 Err(e) => {
                     eprintln!("{e}");
+                    eprintln!("{}", cli_json_line("E_CLI_ARGS", &e));
                     return ExitCode::from(2);
                 }
             };
@@ -119,6 +206,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
                     return ExitCode::from(1);
                 }
             };
@@ -145,6 +236,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
             };
             if let Err(e) = fs::write(&out_path, ir) {
                 eprintln!("write {out_path}: {e}");
+                eprintln!(
+                    "{}",
+                    cli_json_line("E_IO", &format!("write {out_path}: {e}"))
+                );
                 return ExitCode::from(1);
             }
             println!("wrote {}", out_path);
@@ -153,12 +248,17 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
         "check" | "run" => {
             let Some(path) = args.get(1) else {
                 eprintln!("missing file path");
+                eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
                 return ExitCode::from(2);
             };
             let src = match fs::read_to_string(path) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
                     return ExitCode::from(1);
                 }
             };
@@ -199,6 +299,7 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                         Ok(v) => v,
                         Err(e) => {
                             eprintln!("{e}");
+                            eprintln!("{}", cli_json_line("E_CLI_ARGS", &e));
                             return ExitCode::from(2);
                         }
                     };
@@ -223,6 +324,10 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
         }
         _ => {
             eprintln!("unknown command `{cmd}` (try `lir help`)");
+            eprintln!(
+                "{}",
+                cli_json_line("E_CLI_ARGS", &format!("unknown command `{cmd}`"))
+            );
             ExitCode::from(2)
         }
     }
@@ -235,7 +340,8 @@ lir — LIR toolchain (fast data-processing language: interpreter, LLVM IR, WASM
 
 Commands:
   check <file>           Parse and type-check
-  fmt <file>             Print canonical source (§11) to stdout
+  codegen-check <file>   Type-check + in LLVM/WASM codegen subset (see docs/codegen_subset.json)
+  fmt [--check] <file>   Canonical source (§11); --check verifies formatting
   run <file> [--input …] Run with the interpreter
   compile -o <out.ll> <file>
                          Emit LLVM IR (text) for supported programs
@@ -245,7 +351,9 @@ Commands:
 
 Examples:
   lir check examples/foo.lir
+  lir codegen-check examples/foo.lir
   lir fmt examples/foo.lir
+  lir fmt --check examples/foo.lir
   lir run examples/foo.lir --input '[1, 2, 3]'
   lir compile -o out.ll examples/foo.lir
   lir wasm -o out.wasm examples/foo.lir
@@ -268,7 +376,9 @@ Requirements:
 
 The emitter supports a fused subset (i32/i64/bool streams, take/drop prefixes,
 filter/map/scan stages in supported orders, reduce sum|prod|count|min|max).
-Programs outside that subset fail with a typed diagnostic.
+Programs outside that subset fail with a typed diagnostic. Use
+`lir codegen-check <file.lir>` to test membership without writing IR; see
+docs/codegen_subset.json and docs/LLVM_ABI.md#codegen-subset.
 
 Environment:
   LIR_LLVM_TRIPLE   If set, overrides the emitted LLVM `target triple` (default is

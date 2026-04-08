@@ -16,3 +16,5 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang lld
       - run: cargo test --all-features
+      - name: Eval smoke (local lir check)
+        run: bash eval/run_local.sh

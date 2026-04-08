@@ -8,3 +8,19 @@
 **Relationship:** LIR remains a **first-class** language for pipeline-style workloads. LYTR will **embed** LIR (or lower from LIR-shaped syntax) so GP programs can call into the same fusion and codegen path without re-specifying those semantics.
 
 **Casing:** Use **LYTR** / **LIR** in prose; `lytr` for the repo or package folder; `lir` for the current CLI crate/binary and the `lir/1` header line.
+
+## Doc index (engineering & production)
+
+| Doc | Purpose |
+|-----|---------|
+| [LYTR_GLOBAL_IMPLEMENTATION_PLAN.md](LYTR_GLOBAL_IMPLEMENTATION_PLAN.md) | Phased implementation + **§13 ordered backlog** (quarters) |
+| [LYTR_PRODUCTION_READINESS.md](LYTR_PRODUCTION_READINESS.md) | GA gates & checklist |
+| [LYTR_GOALS_AND_TIERS.md](LYTR_GOALS_AND_TIERS.md) | Agent-optimal vs production ecosystem |
+| [LIR_PRODUCT_STRATEGY.md](LIR_PRODUCT_STRATEGY.md) | LIR interp vs codegen subset |
+| [LYTR_SEMANTICS_AND_UB_DRAFT.md](LYTR_SEMANTICS_AND_UB_DRAFT.md) | Semantics / UB / FFI path |
+| [LYTR_STDLIB_CHARTER_DRAFT.md](LYTR_STDLIB_CHARTER_DRAFT.md) | Stdlib scope & security |
+| [LYTR_PLATFORM_AND_EDITIONS_DRAFT.md](LYTR_PLATFORM_AND_EDITIONS_DRAFT.md) | Editions, packages, releases |
+| [LYTR_TOOLING_TRACK.md](LYTR_TOOLING_TRACK.md) | LSP, debugger |
+| [LYTR_QUALITY_AND_SECURITY.md](LYTR_QUALITY_AND_SECURITY.md) | Fuzz, perf CI, supply chain |
+| [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) | GP charter |
+| [LYTR_MEMORY_OPTIONS_DRAFT.md](LYTR_MEMORY_OPTIONS_DRAFT.md) | Memory model options |

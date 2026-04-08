@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "lir_llvm_wasm_codegen_subset",
+  "description": "Programs the LIR toolchain can lower to LLVM IR and (with wasm-capable clang) to WebAssembly. See docs/LLVM_ABI.md#codegen-subset and docs/LIR_V1_SPEC.md §13.",
+  "rules": [
+    "Last stage must be reduce.",
+    "Optional prefix: only drop, take, and id before any filter, map, or scan.",
+    "Middle: zero or more filter, map, and id.",
+    "At most one scan; only on i32 or i64 streams (bool streams: no scan).",
+    "After scan (if present): only filter, map, id — no second scan, no take/drop in middle or suffix.",
+    "Materialized range/lit must not exceed embed size limit (see T_CODEGEN_TOO_LARGE)."
+  ],
+  "cli": {
+    "check_command": "lir codegen-check <file.lir>",
+    "emit_llvm": "lir compile -o out.ll <file.lir>",
+    "emit_wasm": "lir wasm -o out.wasm <file.lir>"
+  },
+  "related_docs": [
+    "docs/LLVM_ABI.md",
+    "docs/WASM_ABI.md",
+    "docs/NAMING.md"
+  ]
+}

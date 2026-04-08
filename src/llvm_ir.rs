@@ -92,6 +92,13 @@ enum PipelineOp<'a> {
     Map(&'a Expr),
 }
 
+/// Whether LLVM IR planning succeeds — same structural gate as [`emit_llvm_ir`].
+/// [`crate::emit_wasm`] runs the same planner then links with `clang`; link may still fail
+/// (e.g. no wasm target) even when this returns `Ok`.
+pub fn codegen_supported(p: &Program) -> Result<(), LirError> {
+    compile_plan(p).map(|_| ())
+}
+
 pub fn emit_llvm_ir(p: &Program) -> Result<String, LirError> {
     let plan = compile_plan(p)?;
 
