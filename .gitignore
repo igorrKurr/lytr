@@ -1,3 +1,10 @@
+.venv/
+**/__pycache__/
 /target/
 **/*.rs.bk
 eval/results.ndjson
+eval/results_llm.ndjson
+eval/comparison_summary.json
+eval/results_pilot_*.ndjson
+eval/results_pilot_comparison_*.json
+eval/regression_report_*.json
