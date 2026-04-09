@@ -16,5 +16,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang lld
       - run: cargo test --all-features
-      - name: Eval smoke (local lir check)
-        run: bash eval/run_local.sh
+      - name: Tier A eval (manifest)
+        run: python3 eval/run_tier_a.py
+      - name: Tier A Python baselines (001–008)
+        run: python3 eval/baseline/python/run_all.py
+      - name: Tier A LLM harness (dry-run, no API)
+        run: python3 eval/run_llm_eval.py --dry-run
+      - name: A/B pilot (LIR + Python LLM harness, dry-run)
+        run: python3 eval/run_pilot_ab.py --dry-run
