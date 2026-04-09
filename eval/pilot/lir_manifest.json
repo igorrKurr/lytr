@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "tier": "A",
+  "pilot": "ab-v1",
+  "description": "Subset of Tier A for LLM LIR vs Python pilot (4 tasks).",
+  "tasks": [
+    {
+      "id": "001_range_sum",
+      "starter": "tasks/001_range_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "10\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "002_input_i32",
+      "starter": "tasks/002_input_i32/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "60\n", "input": "[10, 20, 30]" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "004_empty_lit_count",
+      "starter": "tasks/004_empty_lit_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "0\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "007_bool_filter_count",
+      "starter": "tasks/007_bool_filter_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "2\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    }
+  ]
+}

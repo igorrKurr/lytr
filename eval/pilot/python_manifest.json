@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "pilot_id": "ab-v1",
+  "description": "Same four tasks as lir_manifest.json; LLM writes Python 3 (stdlib only).",
+  "tasks": [
+    {
+      "id": "001_range_sum",
+      "prompt_rel": "tasks/001_range_sum/prompt.md",
+      "stdin": "",
+      "expect_stdout": "10\n"
+    },
+    {
+      "id": "002_input_i32",
+      "prompt_rel": "tasks/002_input_i32/prompt.md",
+      "stdin": "[10, 20, 30]\n",
+      "expect_stdout": "60\n"
+    },
+    {
+      "id": "004_empty_lit_count",
+      "prompt_rel": "tasks/004_empty_lit_count/prompt.md",
+      "stdin": "",
+      "expect_stdout": "0\n"
+    },
+    {
+      "id": "007_bool_filter_count",
+      "prompt_rel": "tasks/007_bool_filter_count/prompt.md",
+      "stdin": "",
+      "expect_stdout": "2\n"
+    }
+  ]
+}
