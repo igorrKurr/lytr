@@ -5,8 +5,9 @@ use std::process::ExitCode;
 use lir::interp::{RunOutcome, Val};
 use lir::ast::ElemTy;
 use lir::{
-    check_program, cli_json_line, codegen_supported, emit_llvm_ir, emit_wasm, format_program,
-    parse_input_array, parse_program, program_is_canonical_text, run_program, source_stream_ty,
+    check_program, cli_json_line, codegen_supported, deserialize_lir_ast_document, emit_llvm_ir,
+    emit_wasm, format_program, parse_input_array, parse_program, program_is_canonical_text,
+    run_program, serialize_lir_ast_document, source_stream_ty,
 };
 
 fn main() -> ExitCode {
@@ -39,6 +40,12 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
             ),
             Some("codegen-check") => eprintln!(
                 "lir codegen-check <file.lir>\n\nParse, type-check, and verify the program is in the LLVM/WASM codegen subset (see docs/codegen_subset.json)."
+            ),
+            Some("dump-ast") => eprintln!(
+                "lir dump-ast <file.lir>\n\nParse LIR text and print JSON AST (schema_version + program). See docs/LIR_AST_JSON.md."
+            ),
+            Some("apply-ast") => eprintln!(
+                "lir apply-ast <file.json>\n\nLoad JSON AST, type-check, print canonical §11 source to stdout."
             ),
             Some(topic) => eprintln!("No detailed help for `{topic}`. Try `lir help` or `lir help compile`."),
         }
@@ -104,6 +111,78 @@ input:i64 (decimal integers as i64), input:bool (true/false)."
                 print!("{}", format_program(&prog));
                 ExitCode::SUCCESS
             }
+        }
+        "dump-ast" => {
+            let Some(path) = args.get(1) else {
+                eprintln!("usage: lir dump-ast <file.lir>");
+                eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
+                return ExitCode::from(2);
+            };
+            let src = match fs::read_to_string(path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
+                    return ExitCode::from(1);
+                }
+            };
+            let prog = match parse_program(&src) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("{e}");
+                    eprintln!("{}", e.to_json_line());
+                    return ExitCode::from(1);
+                }
+            };
+            let json = match serialize_lir_ast_document(&prog) {
+                Ok(j) => j,
+                Err(e) => {
+                    eprintln!("failed to serialize AST: {e}");
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_AST_JSON", &format!("json serialize: {e}"))
+                    );
+                    return ExitCode::from(1);
+                }
+            };
+            println!("{}", json);
+            ExitCode::SUCCESS
+        }
+        "apply-ast" => {
+            let Some(path) = args.get(1) else {
+                eprintln!("usage: lir apply-ast <file.json>");
+                eprintln!("{}", cli_json_line("E_CLI_ARGS", "missing file path"));
+                return ExitCode::from(2);
+            };
+            let raw = match fs::read_to_string(path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("read {}: {e}", path);
+                    eprintln!(
+                        "{}",
+                        cli_json_line("E_IO", &format!("read {path}: {e}"))
+                    );
+                    return ExitCode::from(1);
+                }
+            };
+            let prog = match deserialize_lir_ast_document(&raw) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("{e}");
+                    eprintln!("{}", cli_json_line("E_AST_JSON", &e.to_string()));
+                    return ExitCode::from(1);
+                }
+            };
+            if let Err(e) = check_program(&prog) {
+                eprintln!("{e}");
+                eprintln!("{}", e.to_json_line());
+                return ExitCode::from(1);
+            }
+            print!("{}", format_program(&prog));
+            ExitCode::SUCCESS
         }
         "codegen-check" => {
             let Some(path) = args.get(1) else {
@@ -346,6 +425,8 @@ Commands:
   check <file>           Parse and type-check
   codegen-check <file>   Type-check + in LLVM/WASM codegen subset (see docs/codegen_subset.json)
   fmt [--check] <file>   Canonical source (§11); --check verifies formatting
+  dump-ast <file.lir>    Parse and print JSON AST (versioned envelope)
+  apply-ast <file.json>  Load JSON AST, check, print canonical source
   run <file> [--input …] Run with the interpreter
   compile -o <out.ll> <file>
                          Emit LLVM IR (text) for supported programs

@@ -3,6 +3,7 @@
 //! Normative semantics: `docs/LIR_V1_SPEC.md`.
 
 pub mod ast;
+pub mod ast_json;
 pub mod error;
 pub mod format;
 pub mod input_parse;
@@ -14,6 +15,10 @@ pub mod types;
 pub mod wasm;
 
 pub use ast::Program;
+pub use ast_json::{
+    deserialize_lir_ast_document, serialize_lir_ast_document, AstJsonError, LirAstDocument,
+    AST_JSON_SCHEMA_VERSION,
+};
 pub use error::{cli_json_line, LirError, Span};
 pub use format::{format_program, program_is_canonical_text};
 pub use input_parse::parse_input_array;
