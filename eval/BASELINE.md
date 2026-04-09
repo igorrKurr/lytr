@@ -7,7 +7,7 @@ To estimate **true incremental value** of the LIR toolchain for agents, mirror *
 
 ## Frozen Python scripts (in repo)
 
-[`baseline/python/run_all.py`](baseline/python/run_all.py) implements the same **numeric outcomes** as the Tier A manifest for tasks **001–008** (stdout lines match `lir run` expectations). Tasks **009–011** are formatting / negative cases and are not mirrored there.
+[`baseline/python/run_all.py`](baseline/python/run_all.py) implements the same **numeric outcomes** as the Tier A manifest for tasks **001–008** and **012–020** (stdout lines match `lir run` expectations). Tasks **009–011** are formatting / negative cases and are not mirrored there.
 
 ```bash
 python3 eval/baseline/python/run_all.py

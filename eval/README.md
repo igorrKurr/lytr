@@ -89,7 +89,7 @@ Each `llm_response` line includes **`tokens_prompt`** / **`tokens_completion`** 
 
 ## Baseline comparison (Python)
 
-Frozen stdlib baselines for the numeric tasks **001–008** live in [`baseline/python/run_all.py`](baseline/python/run_all.py):
+Frozen stdlib baselines for the numeric tasks **001–008** and **012–020** live in [`baseline/python/run_all.py`](baseline/python/run_all.py):
 
 ```bash
 python3 eval/baseline/python/run_all.py
