@@ -24,3 +24,5 @@ jobs:
         run: python3 eval/run_llm_eval.py --dry-run
       - name: A/B pilot (LIR + Python LLM harness, dry-run)
         run: python3 eval/run_pilot_ab.py --dry-run
+      - name: Pilot regression (fixture vs frozen baseline)
+        run: python3 eval/pilot_regression.py --comparison eval/baselines/fixtures/results_pilot_comparison_ci_fixture.json --fail

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "event": "pilot_comparison",
+  "run_id": "ci_fixture",
+  "ts": "2026-01-01T00:00:00Z",
+  "comment": "Synthetic comparison payload for CI: must stay aligned with eval/baselines/pilot_ab_reference.json",
+  "accuracy": {
+    "tasks": 4,
+    "lir_pass_count": 4,
+    "python_pass_count": 4,
+    "both_pass_count": 4,
+    "lir_only_pass_count": 0,
+    "python_only_pass_count": 0,
+    "both_fail_count": 0,
+    "agreement_rate": 1.0
+  },
+  "tokens": {
+    "lir": {
+      "api_prompt": 1200,
+      "api_completion": 200,
+      "api_total": 1400
+    },
+    "python": {
+      "api_prompt": 1000,
+      "api_completion": 200,
+      "api_total": 1200
+    },
+    "delta_python_minus_lir_api_total": -200
+  },
+  "thesis_metrics": {
+    "schema_version": 2,
+    "pillar_summary": {
+      "evidence_1_marginal_after_instruction_lir_wins": true,
+      "evidence_2_success_per_token_lir_higher_api": false,
+      "evidence_2_success_per_token_lir_higher_marginal": true,
+      "evidence_2_no_lir_retry_rounds": true,
+      "evidence_3_completion_lir_wins": true
+    }
+  }
+}
