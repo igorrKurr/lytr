@@ -1,0 +1,7 @@
+/target/
+.venv/
+.git/
+**/*.ndjson
+eval/results*.ndjson
+**/__pycache__/
+*.pyc

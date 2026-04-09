@@ -1,0 +1,26 @@
+# Full pilot A/B in the sandbox image (release `lir` at /usr/local/bin/lir).
+# From repo root:
+#   docker compose -f eval/sandbox/docker-compose.yml run --rm pilot-ab
+#
+# With API:
+#   export OPENAI_API_KEY=...
+#   docker compose -f eval/sandbox/docker-compose.yml run --rm pilot-ab
+
+services:
+  pilot-ab:
+    build:
+      context: ../..
+      dockerfile: eval/sandbox/Dockerfile
+    image: lir-eval:sandbox
+    working_dir: /work
+    volumes:
+      - ../..:/work
+    environment:
+      LIR: /usr/local/bin/lir
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Do not use ${VAR:-} here: an empty value overrides Python defaults and breaks URLs.
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_CANONICALIZE: ${LLM_CANONICALIZE:-}
+      LLM_RETRY_ON_FAIL: ${LLM_RETRY_ON_FAIL:-}
+    command: ["python3", "eval/run_pilot_ab.py"]
