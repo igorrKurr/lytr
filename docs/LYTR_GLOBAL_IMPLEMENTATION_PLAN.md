@@ -132,6 +132,8 @@ Phases **interleave** foundation (**LIR** + tooling + eval), **LYTR**, and **per
 
 - Round-trip tests pass; schema published in `docs/` or `schemas/`.
 
+**LIR (this repo):** [`docs/LIR_AST_JSON.md`](LIR_AST_JSON.md), [`schemas/lir_ast_v1.schema.json`](../schemas/lir_ast_v1.schema.json) (envelope + `$defs/span`), `lir dump-ast` / `lir apply-ast`, tests in [`tests/ast_json_roundtrip.rs`](../tests/ast_json_roundtrip.rs).
+
 **Note:** Does not change LIR v1 **semantics**; adds a **view**.
 
 ---
@@ -364,9 +366,10 @@ Record **date**, **decision**, **alternatives rejected**, **metric or principle*
 
 1. **Phase 0 (done in repo):** Subset JSON [`codegen_subset.json`](codegen_subset.json); `lir codegen-check`; tests assert `codegen_supported` ↔ `emit_llvm_ir`; CI keeps interp / LLVM / WASM goldens + eval smoke.
 2. **Phase 1 (done in repo):** `lir fmt --check`; broader CLI JSON lines (`cli_json_line`); [`AGENTS.md`](../AGENTS.md).
-3. **Phase 3 (Tier A — in repo):** [`eval/README.md`](../eval/README.md), [`eval/manifest.json`](../eval/manifest.json), **`python3 eval/run_tier_a.py`** (20 tasks), shared [`eval/tier_a_lib.py`](../eval/tier_a_lib.py) (optional **`tasks/*/hidden/assertions.json`** merged after manifest), **`python3 eval/run_llm_eval.py`** (OpenAI-compatible chat + NDJSON usage fields; `--dry-run` in CI), [`eval/baseline/python/run_all.py`](../eval/baseline/python/run_all.py) vs [`eval/BASELINE.md`](../eval/BASELINE.md). **Pilot A/B + thesis metrics:** [`eval/run_pilot_ab.py`](../eval/run_pilot_ab.py), [`eval/pilot_comparison.py`](../eval/pilot_comparison.py), [`eval/pilot_thesis_metrics.py`](../eval/pilot_thesis_metrics.py). **Regression vs frozen baseline:** [`eval/baselines/pilot_ab_reference.json`](../eval/baselines/pilot_ab_reference.json) + [`eval/pilot_regression.py`](../eval/pilot_regression.py). Optional next: scheduled live LLM eval with a repo secret; widen frozen task set for stable baselines.
-4. **Phase 5 (paper started):** [`LYTR_CHARTER_DRAFT.md`](LYTR_CHARTER_DRAFT.md); B1 grammar/types still to draft.
-5. **Phase 6 (paper started):** [`LYTR_MEMORY_OPTIONS_DRAFT.md`](LYTR_MEMORY_OPTIONS_DRAFT.md); formal decision still open (§8).
+3. **Phase 2 (LIR AST JSON — in repo):** [`LIR_AST_JSON.md`](LIR_AST_JSON.md), [`schemas/lir_ast_v1.schema.json`](../schemas/lir_ast_v1.schema.json), **`lir dump-ast`** / **`lir apply-ast`**, [`tests/ast_json_roundtrip.rs`](../tests/ast_json_roundtrip.rs).
+4. **Phase 3 (Tier A — in repo):** [`eval/README.md`](../eval/README.md), [`eval/manifest.json`](../eval/manifest.json), **`python3 eval/run_tier_a.py`** (20 tasks), shared [`eval/tier_a_lib.py`](../eval/tier_a_lib.py) (optional **`tasks/*/hidden/assertions.json`** merged after manifest), **`python3 eval/run_llm_eval.py`** (OpenAI-compatible chat + NDJSON usage fields; `--dry-run` in CI), [`eval/baseline/python/run_all.py`](../eval/baseline/python/run_all.py) vs [`eval/BASELINE.md`](../eval/BASELINE.md). **Pilot A/B + thesis metrics:** [`eval/run_pilot_ab.py`](../eval/run_pilot_ab.py), [`eval/pilot_comparison.py`](../eval/pilot_comparison.py), [`eval/pilot_thesis_metrics.py`](../eval/pilot_thesis_metrics.py). **Regression vs frozen baseline:** [`eval/baselines/pilot_ab_reference.json`](../eval/baselines/pilot_ab_reference.json) + [`eval/pilot_regression.py`](../eval/pilot_regression.py). Optional next: scheduled live LLM eval with a repo secret; widen frozen task set for stable baselines.
+5. **Phase 5 (paper started):** [`LYTR_CHARTER_DRAFT.md`](LYTR_CHARTER_DRAFT.md); B1 grammar/types still to draft.
+6. **Phase 6 (paper started):** [`LYTR_MEMORY_OPTIONS_DRAFT.md`](LYTR_MEMORY_OPTIONS_DRAFT.md); formal decision still open (§8).
 
 ---
 

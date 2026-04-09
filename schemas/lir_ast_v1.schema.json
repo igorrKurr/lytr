@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/igorrKurr/lytr/schemas/lir_ast_v1.schema.json",
+  "title": "LIR AST JSON document v1",
+  "description": "Top-level envelope for lir dump-ast / apply-ast. Inner `program` structure is defined by Rust serde types in src/ast.rs; see docs/LIR_AST_JSON.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "program"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Bump when JSON shape changes incompatibly."
+    },
+    "program": {
+      "type": "object",
+      "description": "LIR Program AST (span, source, stages).",
+      "required": ["span", "source", "stages"],
+      "properties": {
+        "span": { "$ref": "#/$defs/span" },
+        "source": { "type": "object" },
+        "stages": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}
