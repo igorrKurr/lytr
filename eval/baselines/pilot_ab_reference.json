@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "task_set": "pilot_ab_v1",
+  "reference_run_id": "20260409T132924Z",
+  "comment": "Update reference_run_id and thresholds when prompts, model, or fair-prompts change intentionally.",
+  "pillar_summary_expected": {
+    "evidence_1_marginal_after_instruction_lir_wins": true,
+    "evidence_2_success_per_token_lir_higher_api": false,
+    "evidence_2_success_per_token_lir_higher_marginal": true,
+    "evidence_2_no_lir_retry_rounds": true,
+    "evidence_3_completion_lir_wins": true
+  },
+  "api_token_ceiling_per_arm": {
+    "lir": 1800,
+    "python": 1600
+  },
+  "api_token_ceiling_total_both_arms": 3200
+}
