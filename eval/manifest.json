@@ -105,6 +105,96 @@
       "llm_eval": false,
       "starter": "tasks/011_syntax_error/starter.lir",
       "assertions": [{ "kind": "lir_check", "expect_exit": 1 }]
+    },
+    {
+      "id": "012_prefix_take_sum",
+      "starter": "tasks/012_prefix_take_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "3\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "013_drop_count",
+      "starter": "tasks/013_drop_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "5\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "014_filter_odd_sum",
+      "starter": "tasks/014_filter_odd_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "9\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "015_lit_map_mul_sum",
+      "starter": "tasks/015_lit_map_mul_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "20\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "016_filter_even_map_mul_sum",
+      "starter": "tasks/016_filter_even_map_mul_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "12\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "017_lit_map_add_sum",
+      "starter": "tasks/017_lit_map_add_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "75\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "018_take_filter_even_count",
+      "starter": "tasks/018_take_filter_even_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "5\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "019_lit_reduce_min",
+      "starter": "tasks/019_lit_reduce_min/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "2\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "020_drop_take_sum",
+      "starter": "tasks/020_drop_take_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "9\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
     }
   ]
 }

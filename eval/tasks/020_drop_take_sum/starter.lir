@@ -1,0 +1,2 @@
+lir/1
+range ( 0 , 8 ) | drop 2 | take 3 | reduce sum

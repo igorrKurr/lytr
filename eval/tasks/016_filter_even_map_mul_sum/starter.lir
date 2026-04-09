@@ -1,0 +1,2 @@
+lir/1
+range ( 0 , 6 ) | filter even | map . mul 2 | reduce sum

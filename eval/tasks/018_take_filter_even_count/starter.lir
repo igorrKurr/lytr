@@ -1,0 +1,2 @@
+lir/1
+range ( 0 , 100 ) | take 10 | filter even | reduce count

@@ -1,0 +1,2 @@
+lir/1
+range ( 0 , 7 ) | filter odd | reduce sum

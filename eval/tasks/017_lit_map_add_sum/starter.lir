@@ -1,0 +1,2 @@
+lir/1
+lit ( 10, 20, 30 ) | map . add 5 | reduce sum

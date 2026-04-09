@@ -1,0 +1,2 @@
+lir/1
+lit ( 5, 2, 9 ) | reduce min
