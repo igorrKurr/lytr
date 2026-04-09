@@ -16,6 +16,8 @@ The project pursues **two related goals** that are **not identical**. Naming the
 
 **Success metric:** Eval regressions + human/agent study (optional).
 
+**Implementation:** [`eval/README.md`](../eval/README.md) — **Tier A** manifest (`eval/manifest.json`) + `python3 eval/run_tier_a.py` (CI). This suite is **LIR-only** today; it is the yardstick before **LYTR** GP work. Compare against an incumbent using [`eval/BASELINE.md`](../eval/BASELINE.md).
+
 ---
 
 ## Tier B — Production-ecosystem LYTR

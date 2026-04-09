@@ -24,4 +24,4 @@
 - **Production / GA criteria:** `docs/LYTR_PRODUCTION_READINESS.md` (gates G1–G12).
 - Product tiers (agent vs ecosystem): `docs/LYTR_GOALS_AND_TIERS.md`.
 - LIR interp vs native subset: `docs/LIR_PRODUCT_STRATEGY.md`.
-- Eval skeleton: `eval/README.md`.
+- **Tier A eval (run after LIR changes):** `python3 eval/run_tier_a.py` (see `eval/manifest.json`; optional `eval/tasks/<id>/hidden/assertions.json` merged after manifest). Optional: `python3 eval/baseline/python/run_all.py` (Python outcomes 001–008); `python3 eval/run_llm_eval.py --dry-run` or with `OPENAI_API_KEY` for live LLM grading (`eval/README.md`). For a **single local comparison** (Tier A + baseline ± LLM, timings): `python3 eval/run_comparison.py` (`eval/BASELINE.md`). **A/B pilot** (LLM→LIR vs LLM→Python on four tasks): `eval/pilot/README.md`, `python3 eval/run_pilot_ab.py`.

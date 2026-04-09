@@ -18,6 +18,6 @@
 
 **Agents:** [AGENTS.md](AGENTS.md)
 
-## Eval skeleton
+## Tier A eval (LIR)
 
-[eval/README.md](eval/README.md) — local smoke + future LLM runner.
+[eval/README.md](eval/README.md) — `python3 eval/run_tier_a.py` (manifest + optional `tasks/*/hidden/assertions.json`; CI also runs Python baselines and `run_llm_eval.py --dry-run`). **`python3 eval/run_comparison.py`** runs Tier A + Python baseline together (optional `--llm`); see [eval/BASELINE.md](eval/BASELINE.md). Measures agent-relevant surface **before** LYTR GP.

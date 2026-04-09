@@ -22,5 +22,7 @@
 | [LYTR_PLATFORM_AND_EDITIONS_DRAFT.md](LYTR_PLATFORM_AND_EDITIONS_DRAFT.md) | Editions, packages, releases |
 | [LYTR_TOOLING_TRACK.md](LYTR_TOOLING_TRACK.md) | LSP, debugger |
 | [LYTR_QUALITY_AND_SECURITY.md](LYTR_QUALITY_AND_SECURITY.md) | Fuzz, perf CI, supply chain |
+| [eval/README.md](../eval/README.md) | **Tier A** LIR eval harness |
+| [eval/BASELINE.md](../eval/BASELINE.md) | Optional incumbent comparison |
 | [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) | GP charter |
 | [LYTR_MEMORY_OPTIONS_DRAFT.md](LYTR_MEMORY_OPTIONS_DRAFT.md) | Memory model options |
