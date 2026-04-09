@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "tier": "A",
+  "description": "LIR toolchain regression suite — Tier A (agent-optimal). Measures what agents can rely on today before LYTR GP exists.",
+  "tasks": [
+    {
+      "id": "001_range_sum",
+      "starter": "tasks/001_range_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "10\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "002_input_i32",
+      "starter": "tasks/002_input_i32/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "60\n", "input": "[10, 20, 30]" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "003_codegen_subset_ok",
+      "starter": "tasks/003_codegen_subset_ok/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "8\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "004_empty_lit_count",
+      "starter": "tasks/004_empty_lit_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "0\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "005_filter_even_count",
+      "starter": "tasks/005_filter_even_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "5\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "006_i64_lit_sum",
+      "starter": "tasks/006_i64_lit_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "6000000000\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "007_bool_filter_count",
+      "starter": "tasks/007_bool_filter_count/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "2\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "008_scan_add_sum",
+      "starter": "tasks/008_scan_add_sum/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "lir_run", "expect_stdout": "4\n" },
+        { "kind": "fmt_check", "expect_exit": 0 },
+        { "kind": "codegen_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "009_fmt_already_canonical",
+      "starter": "tasks/009_fmt_already_canonical/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "fmt_check", "expect_exit": 0 }
+      ]
+    },
+    {
+      "id": "010_fmt_not_canonical",
+      "llm_eval": false,
+      "starter": "tasks/010_fmt_not_canonical/starter.lir",
+      "assertions": [
+        { "kind": "lir_check", "expect_exit": 0 },
+        { "kind": "fmt_check", "expect_exit": 1 }
+      ]
+    },
+    {
+      "id": "011_syntax_error",
+      "llm_eval": false,
+      "starter": "tasks/011_syntax_error/starter.lir",
+      "assertions": [{ "kind": "lir_check", "expect_exit": 1 }]
+    }
+  ]
+}

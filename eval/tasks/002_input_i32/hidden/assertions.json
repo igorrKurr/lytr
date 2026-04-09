@@ -1,0 +1,7 @@
+[
+  {
+    "kind": "lir_run",
+    "expect_stdout": "6\n",
+    "input": "[1, 2, 3]"
+  }
+]

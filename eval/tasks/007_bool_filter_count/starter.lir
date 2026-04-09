@@ -1,0 +1,2 @@
+lir/1
+lit ( true, false, true ) | filter eq true | reduce count

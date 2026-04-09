@@ -1,0 +1,2 @@
+lir/1
+input:i64 | map . mul 2 | reduce sum

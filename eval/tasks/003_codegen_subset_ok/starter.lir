@@ -1,2 +1,2 @@
 lir/1
-range(0,10) | drop 1 | take 4 | filter even | map . add 1 | reduce sum
+range ( 0 , 10 ) | drop 1 | take 4 | filter even | map . add 1 | reduce sum
