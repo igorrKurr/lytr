@@ -1,0 +1,2 @@
+# Optional but recommended for pilot token breakdown (system vs user content).
+tiktoken>=0.5.0
