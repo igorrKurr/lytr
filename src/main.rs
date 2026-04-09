@@ -13,6 +13,10 @@ fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
     let Some(cmd) = args.first().map(String::as_str) else {
         print_usage_overview();
+        eprintln!(
+            "{}",
+            cli_json_line("E_CLI_ARGS", "missing command; use `lir help` for usage")
+        );
         return ExitCode::from(2);
     };
 
