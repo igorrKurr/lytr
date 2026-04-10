@@ -17,6 +17,10 @@ wasmi = "1.0.9"
 name = "lir"
 path = "src/main.rs"
 
+[[bin]]
+name = "lytr"
+path = "src/bin/lytr.rs"
+
 [lib]
 name = "lir"
 path = "src/lib.rs"

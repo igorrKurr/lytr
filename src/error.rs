@@ -145,7 +145,7 @@ impl LirError {
     }
 }
 
-fn serde_json_escape(s: &str) -> String {
+pub(crate) fn serde_json_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     out.push('"');
     for ch in s.chars() {

@@ -10,6 +10,7 @@ pub mod input_parse;
 pub mod interp;
 pub mod lex;
 pub mod llvm_ir;
+pub mod lytr;
 pub mod parse;
 pub mod types;
 pub mod wasm;
@@ -26,4 +27,7 @@ pub use interp::{run_program, RunOutcome, Val};
 pub use parse::parse_program;
 pub use types::{check_program, source_stream_ty};
 pub use llvm_ir::{codegen_supported, emit_llvm_ir};
+pub use lytr::{
+    check_lytr_program, parse_lytr_program, run_lytr_program, LytrError,
+};
 pub use wasm::{adapt_llvm_ir_for_wasm, emit_wasm, wasm_clang_target_ok};
