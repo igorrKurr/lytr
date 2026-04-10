@@ -4,39 +4,10 @@ use std::collections::HashMap;
 
 use crate::Span;
 
-use super::ast::{Expr, MainRetTy, Program, Stmt, Ty};
+use super::ast::{Expr, MainRetTy, MainTail, Program, Stmt, Ty};
 use super::error::LytrError;
 
 pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
-    if prog.main.body.stmts.is_empty() {
-        return Err(LytrError::Type {
-            code: "E_LYTR_TYPE",
-            span: prog.main.body.span,
-            message: "`main` body cannot be empty".into(),
-            fix_hint: "add `return …;`".into(),
-        });
-    }
-    let last = prog.main.body.stmts.last().unwrap();
-    if !matches!(last, Stmt::Return { .. }) {
-        return Err(LytrError::Type {
-            code: "E_LYTR_TYPE",
-            span: last.span(),
-            message: "last statement in `main` must be `return`".into(),
-            fix_hint: "end with `return <expr>;`".into(),
-        });
-    }
-    let mid = &prog.main.body.stmts[..prog.main.body.stmts.len() - 1];
-    for st in mid {
-        if !matches!(st, Stmt::Let { .. }) {
-            return Err(LytrError::Type {
-                code: "E_LYTR_TYPE",
-                span: st.span(),
-                message: "only `let` is allowed before the final `return`".into(),
-                fix_hint: "use `let` bindings then a single `return`".into(),
-            });
-        }
-    }
-
     let int_ty = match prog.main.ret {
         MainRetTy::I32 => Ty::I32,
         MainRetTy::I64 => Ty::I64,
@@ -49,41 +20,52 @@ pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
 
     let mut env: HashMap<String, Ty> = HashMap::new();
     for st in &prog.main.body.stmts {
-        match st {
-            Stmt::Let {
-                name,
-                ty,
-                init,
-                name_span,
-                ..
-            } => {
-                let got = type_expr(init, &env, int_ty, res_ty)?;
-                if let Some(decl) = ty {
-                    if !ty_compatible(decl, &got) {
-                        return Err(LytrError::Type {
-                            code: "E_LYTR_TYPE",
-                            span: *name_span,
-                            message: format!(
-                                "initializer type {got:?} does not match `{name}: {decl:?}`"
-                            ),
-                            fix_hint: "fix type ascription or expression".into(),
-                        });
-                    }
-                }
-                env.insert(name.clone(), got);
-            }
-            Stmt::Return { expr, span } => {
-                let t = type_expr(expr, &env, int_ty, res_ty)?;
-                if t != int_ty {
-                    return Err(LytrError::Type {
-                        code: "E_LYTR_TYPE",
-                        span: *span,
-                        message: format!("`main` must return {int_ty:?}, got {t:?}"),
-                        fix_hint: "match the function's `-> i32` or `-> i64`".into(),
-                    });
-                }
+        let Stmt::Let {
+            name,
+            ty,
+            init,
+            name_span,
+            ..
+        } = st;
+        let got = type_expr(init, &env, int_ty, res_ty)?;
+        if let Some(decl) = ty {
+            if !ty_compatible(decl, &got) {
+                return Err(LytrError::Type {
+                    code: "E_LYTR_TYPE",
+                    span: *name_span,
+                    message: format!(
+                        "initializer type {got:?} does not match `{name}: {decl:?}`"
+                    ),
+                    fix_hint: "fix type ascription or expression".into(),
+                });
             }
         }
+        env.insert(name.clone(), got);
+    }
+
+    let out = match &prog.main.body.tail {
+        MainTail::Return { expr, span } => {
+            let t = type_expr(expr, &env, int_ty, res_ty)?;
+            if t != int_ty {
+                return Err(LytrError::Type {
+                    code: "E_LYTR_TYPE",
+                    span: *span,
+                    message: format!("`main` must return {int_ty:?}, got {t:?}"),
+                    fix_hint: "match the function's `-> i32` or `-> i64`".into(),
+                });
+            }
+            return Ok(());
+        }
+        MainTail::Expr(e) => e,
+    };
+    let t = type_expr(out, &env, int_ty, res_ty)?;
+    if t != int_ty {
+        return Err(LytrError::Type {
+            code: "E_LYTR_TYPE",
+            span: expr_span(out),
+            message: format!("`main` body must produce {int_ty:?}, got {t:?}"),
+            fix_hint: "end with an expression of the declared return type".into(),
+        });
     }
     Ok(())
 }
@@ -155,42 +137,30 @@ fn type_expr(
             }
             Ok(Ty::Bool)
         }
-        Expr::Block { stmts, tail, span } => {
-            for st in stmts {
-                if matches!(st, Stmt::Return { .. }) {
-                    return Err(LytrError::Type {
-                        code: "E_LYTR_TYPE",
-                        span: *span,
-                        message: "`return` is not allowed inside a `{ … }` expression block".into(),
-                        fix_hint: "end the block with a value expression, not `return`".into(),
-                    });
-                }
-            }
+        Expr::Block { stmts, tail, span: _ } => {
             let mut env2 = env.clone();
             for st in stmts {
-                if let Stmt::Let {
+                let Stmt::Let {
                     name,
                     ty,
                     init,
                     name_span,
                     ..
-                } = st
-                {
-                    let got = type_expr(init, &env2, int_ty, res_ty)?;
-                    if let Some(decl) = ty {
-                        if !ty_compatible(decl, &got) {
-                            return Err(LytrError::Type {
-                                code: "E_LYTR_TYPE",
-                                span: *name_span,
-                                message: format!(
-                                    "initializer type {got:?} does not match `{name}: {decl:?}`"
-                                ),
-                                fix_hint: "fix type ascription or expression".into(),
-                            });
-                        }
+                } = st;
+                let got = type_expr(init, &env2, int_ty, res_ty)?;
+                if let Some(decl) = ty {
+                    if !ty_compatible(decl, &got) {
+                        return Err(LytrError::Type {
+                            code: "E_LYTR_TYPE",
+                            span: *name_span,
+                            message: format!(
+                                "initializer type {got:?} does not match `{name}: {decl:?}`"
+                            ),
+                            fix_hint: "fix type ascription or expression".into(),
+                        });
                     }
-                    env2.insert(name.clone(), got);
                 }
+                env2.insert(name.clone(), got);
             }
             type_expr(tail, &env2, int_ty, res_ty)
         }

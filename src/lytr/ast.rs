@@ -22,10 +22,18 @@ pub struct FnItem {
     pub body: Block,
 }
 
+/// `main` body: `let …;` … then either `return expr;` or a tail expression (no semicolon).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     pub span: Span,
     pub stmts: Vec<Stmt>,
+    pub tail: MainTail,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MainTail {
+    Return { expr: Expr, span: Span },
+    Expr(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,13 +46,12 @@ pub enum Stmt {
         init: Expr,
         span: Span,
     },
-    Return { expr: Expr, span: Span },
 }
 
 impl Stmt {
     pub fn span(&self) -> Span {
         match self {
-            Stmt::Let { span, .. } | Stmt::Return { span, .. } => *span,
+            Stmt::Let { span, .. } => *span,
         }
     }
 }
@@ -82,7 +89,7 @@ pub enum Expr {
         else_b: Box<Expr>,
         span: Span,
     },
-    /// `{ let …; …; tail_expr }` — only `let` before the tail (no `return` inside).
+    /// `{ let …; …; tail_expr }` — only `let` before the tail (no `return` / no `main` tail forms here).
     Block {
         stmts: Vec<Stmt>,
         tail: Box<Expr>,

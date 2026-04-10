@@ -28,6 +28,6 @@ pub use parse::parse_program;
 pub use types::{check_program, source_stream_ty};
 pub use llvm_ir::{codegen_supported, emit_llvm_ir};
 pub use lytr::{
-    check_lytr_program, parse_lytr_program, run_lytr_program, LytrError, LytrRun,
+    check_lytr_program, parse_lytr_program, run_lytr_program, LytrError, LytrRun, MainTail,
 };
 pub use wasm::{adapt_llvm_ir_for_wasm, emit_wasm, wasm_clang_target_ok};

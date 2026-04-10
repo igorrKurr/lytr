@@ -9,6 +9,18 @@ fn minimal_example_runs() {
 }
 
 #[test]
+fn main_with_return_still_works() {
+    let src = r"lytr/0.1
+fn main() -> i32 {
+  return 1 + 2 * 3;
+}
+";
+    let p = parse_lytr_program(src).unwrap();
+    check_lytr_program(&p).unwrap();
+    assert_eq!(run_lytr_program(&p).unwrap(), LytrRun::I32(7));
+}
+
+#[test]
 fn parens_and_precedence() {
     let src = r"lytr/0.1
 

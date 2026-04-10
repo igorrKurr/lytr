@@ -46,7 +46,7 @@ LYTR_SYSTEM = """You output ONLY a valid LYTR 0.1 program (bootstrap subset).
 
 Rules:
 - Line 1 must be exactly: lytr/0.1
-- Then: fn main() -> i32 { ... } or -> i64 { ... } with a final return. Inside `if` branches (and optional `{ ... }` after `=>` in match), use `{ let ...; tail_expr }` or `{ tail_expr }` — tail must not use `return`.
+- Then: fn main() -> i32 { ... } or -> i64 { ... }: optional `let ...;` lines, then either `return expr;` or a tail expression (no semicolon) of the return type. Inside `if` branches (and optional `{ ... }` after `=>` in match), use `{ let ...; tail_expr }` or `{ tail_expr }` — inner blocks must not use `return`.
 - Types: i32, i64, bool, Result<i32, i32> or Result<i64, i64> (must match main's integer width). No user generics. Integer arithmetic: + - * / %; comparisons: == != < > <= >=.
 - The program must print one integer line to stdout (the i32 result of main) — same contract as the starter.
 

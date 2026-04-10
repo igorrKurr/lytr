@@ -14,6 +14,7 @@ pub mod parse;
 pub mod types;
 
 pub use error::LytrError;
+pub use ast::MainTail;
 pub use interp::{run_lytr_program, LytrRun};
 pub use parse::parse_lytr_program;
 pub use types::check_lytr_program;

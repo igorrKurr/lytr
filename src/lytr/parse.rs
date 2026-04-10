@@ -3,7 +3,7 @@
 use crate::Span;
 
 use super::ast::{
-    BinOp, Block, CmpOp, Expr, FnItem, MainRetTy, Program, Stmt, Ty,
+    BinOp, Block, CmpOp, Expr, FnItem, MainRetTy, MainTail, Program, Stmt, Ty,
 };
 use super::error::LytrError;
 use super::lex::{tokenize, Token, TokenKind};
@@ -143,27 +143,26 @@ impl<'a> Parser<'a> {
     fn parse_block(&mut self) -> Result<Block, LytrError> {
         let lb = self.expect(TokenKind::LBrace)?;
         let mut stmts = Vec::new();
-        while self.cur().kind != TokenKind::RBrace {
-            stmts.push(self.parse_stmt()?);
+        while self.cur().kind == TokenKind::Let {
+            stmts.push(self.parse_let_stmt()?);
         }
+        let tail = if self.cur().kind == TokenKind::Return {
+            let ret = self.expect(TokenKind::Return)?;
+            let expr = self.parse_expr()?;
+            let semi = self.expect(TokenKind::Semi)?;
+            MainTail::Return {
+                expr,
+                span: Span::new(ret.span.start, semi.span.end),
+            }
+        } else {
+            MainTail::Expr(self.parse_expr()?)
+        };
         let rb = self.expect(TokenKind::RBrace)?;
         Ok(Block {
             span: Span::new(lb.span.start, rb.span.end),
             stmts,
+            tail,
         })
-    }
-
-    fn parse_stmt(&mut self) -> Result<Stmt, LytrError> {
-        match self.cur().kind {
-            TokenKind::Let => self.parse_let_stmt(),
-            TokenKind::Return => self.parse_return_stmt(),
-            _ => Err(LytrError::Syntax {
-                code: "E_LYTR_PARSE",
-                span: self.cur().span,
-                message: "expected `let` or `return`".into(),
-                fix_hint: "each statement is `let …;` or `return …;`".into(),
-            }),
-        }
     }
 
     fn parse_let_stmt(&mut self) -> Result<Stmt, LytrError> {
@@ -187,16 +186,6 @@ impl<'a> Parser<'a> {
             ty,
             init,
             span: Span::new(let_tok.span.start, semi.span.end),
-        })
-    }
-
-    fn parse_return_stmt(&mut self) -> Result<Stmt, LytrError> {
-        let ret = self.expect(TokenKind::Return)?;
-        let expr = self.parse_expr()?;
-        let semi = self.expect(TokenKind::Semi)?;
-        Ok(Stmt::Return {
-            expr,
-            span: Span::new(ret.span.start, semi.span.end),
         })
     }
 

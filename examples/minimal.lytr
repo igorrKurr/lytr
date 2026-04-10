@@ -1,5 +1,5 @@
 lytr/0.1
 
 fn main() -> i32 {
-  return 1 + 2 * 3;
+  1 + 2 * 3
 }

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::Span;
 
-use super::ast::{BinOp, CmpOp, Expr, MainRetTy, Program, Stmt};
+use super::ast::{BinOp, CmpOp, Expr, MainRetTy, MainTail, Program, Stmt};
 use super::error::LytrError;
 
 /// Result of running a LYTR program (`main` is always `i32` or `i64`).
@@ -29,16 +29,15 @@ pub fn run_lytr_program(prog: &Program) -> Result<LytrRun, LytrError> {
     let ret = prog.main.ret;
     let mut env: HashMap<String, Val> = HashMap::new();
     let stmts = &prog.main.body.stmts;
-    for st in &stmts[..stmts.len().saturating_sub(1)] {
-        if let Stmt::Let { name, init, .. } = st {
-            let v = eval_expr(init, &mut env, ret)?;
-            env.insert(name.clone(), v);
-        }
+    for st in stmts {
+        let Stmt::Let { name, init, .. } = st;
+        let v = eval_expr(init, &mut env, ret)?;
+        env.insert(name.clone(), v);
     }
-    let Some(Stmt::Return { expr, .. }) = stmts.last() else {
-        unreachable!()
+    let v = match &prog.main.body.tail {
+        MainTail::Return { expr, .. } => eval_expr(expr, &mut env, ret)?,
+        MainTail::Expr(e) => eval_expr(e, &mut env, ret)?,
     };
-    let v = eval_expr(expr, &mut env, ret)?;
     match (ret, v) {
         (MainRetTy::I32, Val::I32(i)) => Ok(LytrRun::I32(i)),
         (MainRetTy::I64, Val::I64(i)) => Ok(LytrRun::I64(i)),
@@ -107,10 +106,9 @@ fn eval_expr(
         Expr::Block { stmts, tail, .. } => {
             let mut inner = env.clone();
             for st in stmts {
-                if let Stmt::Let { name, init, .. } = st {
-                    let v = eval_expr(init, &mut inner, ret)?;
-                    inner.insert(name.clone(), v);
-                }
+                let Stmt::Let { name, init, .. } = st;
+                let v = eval_expr(init, &mut inner, ret)?;
+                inner.insert(name.clone(), v);
             }
             eval_expr(tail, &mut inner, ret)
         }
