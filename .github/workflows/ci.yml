@@ -16,10 +16,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang lld
       - run: cargo test --all-features
-      - name: LYTR 0.1 bootstrap (lytr check/run)
-        run: |
-          cargo run -q --bin lytr -- check examples/minimal.lytr
-          test "$(cargo run -q --bin lytr -- run examples/minimal.lytr)" = "7"
+      - name: LYTR eval (numeric parity vs Tier A Python baselines)
+        run: python3 eval/run_lytr_tier.py
       - name: Tier A eval (manifest)
         run: python3 eval/run_tier_a.py
       - name: Tier A Python baselines (numeric tasks)

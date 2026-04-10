@@ -14,6 +14,18 @@ Same as `bash eval/run_local.sh`.
 
 **Invoking `lir`:** If **`LIR`** is unset, the harness uses **`target/release/lir`** when that file exists (run `cargo build --release --bin lir` once — **no `cargo` on the hot path**). Otherwise it falls back to **`cargo run -q --bin lir --`**. Override with **`LIR=/path/to/lir`** anytime.
 
+## LYTR eval (`lytr_manifest.json`)
+
+**[`lytr_manifest.json`](lytr_manifest.json)** is the LYTR bootstrap regression suite: **`lytr check`** / **`lytr run`** on reference **`.lytr`** programs under **`eval/lytr_tasks/<task_id>/`**, with expected stdout aligned to the **same numeric outcomes** as the frozen Python baselines for tasks **001–005, 007–008, 012–020** (see [`baseline/python/run_all.py`](baseline/python/run_all.py)). Task **006** (i64) is omitted until the bootstrap gains **i64**; tasks **009–011** are LIR-only (fmt / negative).
+
+```bash
+python3 eval/run_lytr_tier.py
+```
+
+**`LYTR`** env overrides the `lytr` binary (same resolution pattern as **`LIR`**: release binary preferred, else `cargo run …`). Results append to **`eval/results_lytr.ndjson`** (gitignored). Shared assertion helpers live in [`tier_a_lib.py`](tier_a_lib.py) (`lytr_check`, `lytr_run`).
+
+This track exists so **pipeline cost** and agent metrics can eventually compare **LYTR vs LIR vs Python** on matched task ids without implying LYTR can express full LIR pipelines yet (reference programs use closed-form `return` where loops would be used in LIR).
+
 When the fallback **`cargo run`** is used, the harness sets **`RUSTFLAGS`** to include **`-A warnings`** so **stderr** is mostly LIR diagnostics (not rustc warnings).
 
 **API billing:** OpenAI **token counts** are **only** for chat requests. Local **`lir`** / **`python3`** subprocesses add **wall time**, not LLM API tokens.

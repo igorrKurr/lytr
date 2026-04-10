@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Orchestrate a **local comparison dry run**: Tier A manifest (LIR CLI) + Python baselines.
+Orchestrate a **local comparison dry run**: Tier A manifest (LIR CLI) + Python baselines + LYTR numeric parity (`run_lytr_tier.py`).
 Optional **`--llm`** runs live [`run_llm_eval.py`](run_llm_eval.py) (needs `OPENAI_API_KEY`, costs tokens).
 
 Does not replace CI (CI still runs `run_tier_a`, baseline, and `run_llm_eval --dry-run` separately).
@@ -82,6 +82,13 @@ def main() -> int:
         _maybe_write_json(args, ts, steps)
         return code
 
+    code, sec = _run_step([py, str(ROOT / "eval" / "run_lytr_tier.py")])
+    steps["lytr_tier"] = {"exit_code": code, "seconds": round(sec, 3)}
+    if code != 0:
+        _print_summary(ts, steps, skipped_llm=None)
+        _maybe_write_json(args, ts, steps)
+        return code
+
     if args.llm:
         if not os.environ.get("OPENAI_API_KEY", "").strip():
             print("error: --llm requires OPENAI_API_KEY", file=sys.stderr)
@@ -128,6 +135,7 @@ def _write_json(path: Path, ts: str, steps: dict) -> None:
         "git_rev": _git_rev(),
         "tier_a": steps.get("tier_a"),
         "baseline_python": steps.get("baseline_python"),
+        "lytr_tier": steps.get("lytr_tier"),
         "llm_eval": steps.get("llm_eval"),
         "notes": (
             "Agent turns and subjective effort are recorded outside this repo; "

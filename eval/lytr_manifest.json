@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "tier": "LYTR",
+  "description": "LYTR bootstrap numeric parity with Tier A Python baselines (closed-form programs). Excludes 006_i64_lit_sum (bootstrap i32-only); excludes 009–011 (LIR fmt/syntax harness). See eval/README.md §LYTR eval.",
+  "tasks": [
+    {
+      "id": "001_range_sum",
+      "starter": "lytr_tasks/001_range_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "10\n" }
+      ]
+    },
+    {
+      "id": "002_input_i32",
+      "starter": "lytr_tasks/002_input_i32/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "60\n" }
+      ]
+    },
+    {
+      "id": "003_codegen_subset_ok",
+      "starter": "lytr_tasks/003_codegen_subset_ok/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "8\n" }
+      ]
+    },
+    {
+      "id": "004_empty_lit_count",
+      "starter": "lytr_tasks/004_empty_lit_count/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "0\n" }
+      ]
+    },
+    {
+      "id": "005_filter_even_count",
+      "starter": "lytr_tasks/005_filter_even_count/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "5\n" }
+      ]
+    },
+    {
+      "id": "007_bool_filter_count",
+      "starter": "lytr_tasks/007_bool_filter_count/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "2\n" }
+      ]
+    },
+    {
+      "id": "008_scan_add_sum",
+      "starter": "lytr_tasks/008_scan_add_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "4\n" }
+      ]
+    },
+    {
+      "id": "012_prefix_take_sum",
+      "starter": "lytr_tasks/012_prefix_take_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "3\n" }
+      ]
+    },
+    {
+      "id": "013_drop_count",
+      "starter": "lytr_tasks/013_drop_count/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "5\n" }
+      ]
+    },
+    {
+      "id": "014_filter_odd_sum",
+      "starter": "lytr_tasks/014_filter_odd_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "9\n" }
+      ]
+    },
+    {
+      "id": "015_lit_map_mul_sum",
+      "starter": "lytr_tasks/015_lit_map_mul_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "20\n" }
+      ]
+    },
+    {
+      "id": "016_filter_even_map_mul_sum",
+      "starter": "lytr_tasks/016_filter_even_map_mul_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "12\n" }
+      ]
+    },
+    {
+      "id": "017_lit_map_add_sum",
+      "starter": "lytr_tasks/017_lit_map_add_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "75\n" }
+      ]
+    },
+    {
+      "id": "018_take_filter_even_count",
+      "starter": "lytr_tasks/018_take_filter_even_count/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "5\n" }
+      ]
+    },
+    {
+      "id": "019_lit_reduce_min",
+      "starter": "lytr_tasks/019_lit_reduce_min/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "2\n" }
+      ]
+    },
+    {
+      "id": "020_drop_take_sum",
+      "starter": "lytr_tasks/020_drop_take_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "9\n" }
+      ]
+    }
+  ]
+}

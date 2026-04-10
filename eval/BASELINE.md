@@ -15,7 +15,13 @@ python3 eval/baseline/python/run_all.py
 
 CI runs this after `eval/run_tier_a.py` so baselines stay aligned with the manifest.
 
-## One-shot comparison (LIR + Python, optional LLM)
+## LYTR parity harness (`lytr_manifest.json`)
+
+[`run_lytr_tier.py`](run_lytr_tier.py) runs the `lytr` CLI against [`lytr_manifest.json`](lytr_manifest.json): **closed-form** `.lytr` programs whose stdout matches the same numeric expectations as [`baseline/python/run_all.py`](baseline/python/run_all.py) for each included task id. This is the **regression track** for the LYTR bootstrap on shared **outcomes** with Tier A (not same source programs — LYTR has no pipelines yet). Excludes **006** (i64) and **009–011** (LIR-only). Override the binary with **`LYTR=/path/to/lytr`** (default: `target/release/lytr` if present, else `cargo run -q --bin lytr --`).
+
+CI runs `run_lytr_tier.py` after unit tests; [`run_comparison.py`](run_comparison.py) includes it after the Python baseline step.
+
+## One-shot comparison (LIR + Python + LYTR, optional LLM)
 
 When you are ready to **run the comparison** (measure wall time; optionally LLM cost), use [`run_comparison.py`](run_comparison.py). A **`uv`** venv keeps a predictable interpreter (stdlib-only scripts; no extra packages required):
 

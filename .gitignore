@@ -3,6 +3,7 @@
 /target/
 **/*.rs.bk
 eval/results.ndjson
+eval/results_lytr.ndjson
 eval/results_llm.ndjson
 eval/comparison_summary.json
 eval/results_pilot_*.ndjson
