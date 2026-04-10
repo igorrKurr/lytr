@@ -29,8 +29,8 @@ The bootstrap in this file is **step 0** of that loop: a runnable core so semant
 ## Done (this repo)
 
 - **`lytr` CLI:** `lytr check <file.lytr>`, `lytr run <file.lytr>` (see `cargo run --bin lytr -- --help`).
-- **Language:** first line `lytr/0.1`, then `fn main() -> i32 { … }` with:
-  - **`let`** (`let x: i32 = …;` or inferred `let x = …;`), types `i32`, `bool`, `Result<i32, i32>`;
+- **Language:** first line `lytr/0.1`, then `fn main() -> i32` or `-> i64 { … }` with:
+  - **`let`** (`let x: i32 = …;` or inferred `let x = …;`), types `i32`, `i64`, `bool`, `Result<i32, i32>` / `Result<i64, i64>` (integer width matches `main`);
   - **Arithmetic / compare:** `+ - * / %`, `== != < > <= >=`, unary `-` on literals;
   - **`if`** expression: `if cond { e1 } else { e2 }` (condition must be `bool`);
   - **`Ok` / `Err`** (i32 payloads only) and **`match`** with required `Ok(x) => …` and `Err(y) => …` arms;

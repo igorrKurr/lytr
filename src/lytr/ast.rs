@@ -8,9 +8,17 @@ pub struct Program {
     pub main: FnItem,
 }
 
+/// `main` return type (bootstrap: `i32` or `i64` only).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MainRetTy {
+    I32,
+    I64,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FnItem {
     pub name_span: Span,
+    pub ret: MainRetTy,
     pub body: Block,
 }
 
@@ -44,13 +52,16 @@ impl Stmt {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ty {
     I32,
+    I64,
     Bool,
     ResultI32,
+    ResultI64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
-    Int { value: i32, span: Span },
+    /// Integer literal (type fixed by `main` return: `i32` or `i64` program).
+    Int { value: i64, span: Span },
     BoolLit { value: bool, span: Span },
     Var { name: String, span: Span },
     Binary {

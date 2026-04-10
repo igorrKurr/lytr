@@ -4,44 +4,63 @@ use std::collections::HashMap;
 
 use crate::Span;
 
-use super::ast::{BinOp, CmpOp, Expr, Program, Stmt};
+use super::ast::{BinOp, CmpOp, Expr, MainRetTy, Program, Stmt};
 use super::error::LytrError;
+
+/// Result of running a LYTR program (`main` is always `i32` or `i64`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LytrRun {
+    I32(i32),
+    I64(i64),
+}
 
 #[derive(Clone, Debug)]
 pub enum Val {
     I32(i32),
+    I64(i64),
     Bool(bool),
-    ResOk(i32),
-    ResErr(i32),
+    ResOkI32(i32),
+    ResErrI32(i32),
+    ResOkI64(i64),
+    ResErrI64(i64),
 }
 
-pub fn run_lytr_program(prog: &Program) -> Result<i32, LytrError> {
+pub fn run_lytr_program(prog: &Program) -> Result<LytrRun, LytrError> {
+    let ret = prog.main.ret;
     let mut env: HashMap<String, Val> = HashMap::new();
     let stmts = &prog.main.body.stmts;
     for st in &stmts[..stmts.len().saturating_sub(1)] {
         if let Stmt::Let { name, init, .. } = st {
-            let v = eval_expr(init, &mut env)?;
+            let v = eval_expr(init, &mut env, ret)?;
             env.insert(name.clone(), v);
         }
     }
     let Some(Stmt::Return { expr, .. }) = stmts.last() else {
         unreachable!()
     };
-    let v = eval_expr(expr, &mut env)?;
-    match v {
-        Val::I32(i) => Ok(i),
-        other => Err(LytrError::Runtime {
+    let v = eval_expr(expr, &mut env, ret)?;
+    match (ret, v) {
+        (MainRetTy::I32, Val::I32(i)) => Ok(LytrRun::I32(i)),
+        (MainRetTy::I64, Val::I64(i)) => Ok(LytrRun::I64(i)),
+        (r, other) => Err(LytrError::Runtime {
             code: "E_LYTR_RUNTIME",
             span: Span::new(0, 0),
-            message: format!("`main` returned non-i32: {other:?}"),
-            fix_hint: "return an i32".into(),
+            message: format!("`main` return mismatch: expected {r:?}, got {other:?}"),
+            fix_hint: "internal: typecheck should catch".into(),
         }),
     }
 }
 
-fn eval_expr(e: &Expr, env: &mut HashMap<String, Val>) -> Result<Val, LytrError> {
+fn eval_expr(
+    e: &Expr,
+    env: &mut HashMap<String, Val>,
+    ret: MainRetTy,
+) -> Result<Val, LytrError> {
     match e {
-        Expr::Int { value, .. } => Ok(Val::I32(*value)),
+        Expr::Int { value, .. } => match ret {
+            MainRetTy::I32 => Ok(Val::I32(*value as i32)),
+            MainRetTy::I64 => Ok(Val::I64(*value)),
+        },
         Expr::BoolLit { value, .. } => Ok(Val::Bool(*value)),
         Expr::Var { name, span } => env.get(name).cloned().ok_or_else(|| LytrError::Runtime {
             code: "E_LYTR_RUNTIME",
@@ -54,65 +73,46 @@ fn eval_expr(e: &Expr, env: &mut HashMap<String, Val>) -> Result<Val, LytrError>
             left,
             right,
             span,
-        } => {
-            let a = eval_i32(left, env, *span)?;
-            let b = eval_i32(right, env, *span)?;
-            let r = match op {
-                BinOp::Add => a.checked_add(b),
-                BinOp::Sub => a.checked_sub(b),
-                BinOp::Mul => a.checked_mul(b),
-                BinOp::Div => {
-                    if b == 0 {
-                        return Err(LytrError::Runtime {
-                            code: "E_LYTR_DIV0",
-                            span: *span,
-                            message: "division by zero".into(),
-                            fix_hint: "".into(),
-                        });
-                    }
-                    Some(a / b)
-                }
-                BinOp::Mod => {
-                    if b == 0 {
-                        return Err(LytrError::Runtime {
-                            code: "E_LYTR_DIV0",
-                            span: *span,
-                            message: "modulo by zero".into(),
-                            fix_hint: "".into(),
-                        });
-                    }
-                    Some(a % b)
-                }
-            };
-            Ok(Val::I32(r.ok_or_else(|| overflow(*span))?))
-        }
+        } => match ret {
+            MainRetTy::I32 => {
+                let a = eval_i32(left, env, ret, *span)?;
+                let b = eval_i32(right, env, ret, *span)?;
+                let r = binop_i32(*op, a, b, *span)?;
+                Ok(Val::I32(r))
+            }
+            MainRetTy::I64 => {
+                let a = eval_i64(left, env, ret, *span)?;
+                let b = eval_i64(right, env, ret, *span)?;
+                let r = binop_i64(*op, a, b, *span)?;
+                Ok(Val::I64(r))
+            }
+        },
         Expr::Cmp {
             op,
             left,
             right,
             span,
-        } => {
-            let a = eval_i32(left, env, *span)?;
-            let b = eval_i32(right, env, *span)?;
-            let out = match op {
-                CmpOp::Eq => a == b,
-                CmpOp::Ne => a != b,
-                CmpOp::Lt => a < b,
-                CmpOp::Gt => a > b,
-                CmpOp::Le => a <= b,
-                CmpOp::Ge => a >= b,
-            };
-            Ok(Val::Bool(out))
-        }
+        } => match ret {
+            MainRetTy::I32 => {
+                let a = eval_i32(left, env, ret, *span)?;
+                let b = eval_i32(right, env, ret, *span)?;
+                Ok(Val::Bool(cmp_i32(*op, a, b)))
+            }
+            MainRetTy::I64 => {
+                let a = eval_i64(left, env, ret, *span)?;
+                let b = eval_i64(right, env, ret, *span)?;
+                Ok(Val::Bool(cmp_i64(*op, a, b)))
+            }
+        },
         Expr::If {
             cond,
             then_b,
             else_b,
             span,
         } => {
-            match eval_expr(cond, env)? {
-                Val::Bool(true) => eval_expr(then_b, env),
-                Val::Bool(false) => eval_expr(else_b, env),
+            match eval_expr(cond, env, ret)? {
+                Val::Bool(true) => eval_expr(then_b, env, ret),
+                Val::Bool(false) => eval_expr(else_b, env, ret),
                 _ => Err(LytrError::Runtime {
                     code: "E_LYTR_RUNTIME",
                     span: *span,
@@ -121,14 +121,26 @@ fn eval_expr(e: &Expr, env: &mut HashMap<String, Val>) -> Result<Val, LytrError>
                 }),
             }
         }
-        Expr::Ok(inner) => {
-            let i = eval_i32(inner, env, expr_span(inner))?;
-            Ok(Val::ResOk(i))
-        }
-        Expr::Err(inner) => {
-            let i = eval_i32(inner, env, expr_span(inner))?;
-            Ok(Val::ResErr(i))
-        }
+        Expr::Ok(inner) => match ret {
+            MainRetTy::I32 => {
+                let i = eval_i32(inner, env, ret, expr_span(inner))?;
+                Ok(Val::ResOkI32(i))
+            }
+            MainRetTy::I64 => {
+                let i = eval_i64(inner, env, ret, expr_span(inner))?;
+                Ok(Val::ResOkI64(i))
+            }
+        },
+        Expr::Err(inner) => match ret {
+            MainRetTy::I32 => {
+                let i = eval_i32(inner, env, ret, expr_span(inner))?;
+                Ok(Val::ResErrI32(i))
+            }
+            MainRetTy::I64 => {
+                let i = eval_i64(inner, env, ret, expr_span(inner))?;
+                Ok(Val::ResErrI64(i))
+            }
+        },
         Expr::Match {
             scrutinee,
             ok_name,
@@ -138,17 +150,29 @@ fn eval_expr(e: &Expr, env: &mut HashMap<String, Val>) -> Result<Val, LytrError>
             span,
             ..
         } => {
-            let v = eval_expr(scrutinee, env)?;
-            match v {
-                Val::ResOk(payload) => {
+            let v = eval_expr(scrutinee, env, ret)?;
+            match (ret, v) {
+                (MainRetTy::I32, Val::ResOkI32(payload)) => {
                     env.insert(ok_name.clone(), Val::I32(payload));
-                    let out = eval_expr(ok_arm, env)?;
+                    let out = eval_expr(ok_arm, env, ret)?;
                     env.remove(ok_name);
                     Ok(out)
                 }
-                Val::ResErr(payload) => {
+                (MainRetTy::I32, Val::ResErrI32(payload)) => {
                     env.insert(err_name.clone(), Val::I32(payload));
-                    let out = eval_expr(err_arm, env)?;
+                    let out = eval_expr(err_arm, env, ret)?;
+                    env.remove(err_name);
+                    Ok(out)
+                }
+                (MainRetTy::I64, Val::ResOkI64(payload)) => {
+                    env.insert(ok_name.clone(), Val::I64(payload));
+                    let out = eval_expr(ok_arm, env, ret)?;
+                    env.remove(ok_name);
+                    Ok(out)
+                }
+                (MainRetTy::I64, Val::ResErrI64(payload)) => {
+                    env.insert(err_name.clone(), Val::I64(payload));
+                    let out = eval_expr(err_arm, env, ret)?;
                     env.remove(err_name);
                     Ok(out)
                 }
@@ -163,13 +187,119 @@ fn eval_expr(e: &Expr, env: &mut HashMap<String, Val>) -> Result<Val, LytrError>
     }
 }
 
-fn eval_i32(e: &Expr, env: &mut HashMap<String, Val>, span: Span) -> Result<i32, LytrError> {
-    match eval_expr(e, env)? {
+fn binop_i32(op: BinOp, a: i32, b: i32, span: Span) -> Result<i32, LytrError> {
+    let r = match op {
+        BinOp::Add => a.checked_add(b),
+        BinOp::Sub => a.checked_sub(b),
+        BinOp::Mul => a.checked_mul(b),
+        BinOp::Div => {
+            if b == 0 {
+                return Err(LytrError::Runtime {
+                    code: "E_LYTR_DIV0",
+                    span,
+                    message: "division by zero".into(),
+                    fix_hint: "".into(),
+                });
+            }
+            Some(a / b)
+        }
+        BinOp::Mod => {
+            if b == 0 {
+                return Err(LytrError::Runtime {
+                    code: "E_LYTR_DIV0",
+                    span,
+                    message: "modulo by zero".into(),
+                    fix_hint: "".into(),
+                });
+            }
+            Some(a % b)
+        }
+    };
+    r.ok_or_else(|| overflow(span))
+}
+
+fn binop_i64(op: BinOp, a: i64, b: i64, span: Span) -> Result<i64, LytrError> {
+    let r = match op {
+        BinOp::Add => a.checked_add(b),
+        BinOp::Sub => a.checked_sub(b),
+        BinOp::Mul => a.checked_mul(b),
+        BinOp::Div => {
+            if b == 0 {
+                return Err(LytrError::Runtime {
+                    code: "E_LYTR_DIV0",
+                    span,
+                    message: "division by zero".into(),
+                    fix_hint: "".into(),
+                });
+            }
+            Some(a / b)
+        }
+        BinOp::Mod => {
+            if b == 0 {
+                return Err(LytrError::Runtime {
+                    code: "E_LYTR_DIV0",
+                    span,
+                    message: "modulo by zero".into(),
+                    fix_hint: "".into(),
+                });
+            }
+            Some(a % b)
+        }
+    };
+    r.ok_or_else(|| overflow(span))
+}
+
+fn cmp_i32(op: CmpOp, a: i32, b: i32) -> bool {
+    match op {
+        CmpOp::Eq => a == b,
+        CmpOp::Ne => a != b,
+        CmpOp::Lt => a < b,
+        CmpOp::Gt => a > b,
+        CmpOp::Le => a <= b,
+        CmpOp::Ge => a >= b,
+    }
+}
+
+fn cmp_i64(op: CmpOp, a: i64, b: i64) -> bool {
+    match op {
+        CmpOp::Eq => a == b,
+        CmpOp::Ne => a != b,
+        CmpOp::Lt => a < b,
+        CmpOp::Gt => a > b,
+        CmpOp::Le => a <= b,
+        CmpOp::Ge => a >= b,
+    }
+}
+
+fn eval_i32(
+    e: &Expr,
+    env: &mut HashMap<String, Val>,
+    ret: MainRetTy,
+    span: Span,
+) -> Result<i32, LytrError> {
+    match eval_expr(e, env, ret)? {
         Val::I32(i) => Ok(i),
         _ => Err(LytrError::Runtime {
             code: "E_LYTR_RUNTIME",
             span,
             message: "expected i32".into(),
+            fix_hint: "".into(),
+        }),
+    }
+}
+
+fn eval_i64(
+    e: &Expr,
+    env: &mut HashMap<String, Val>,
+    ret: MainRetTy,
+    span: Span,
+) -> Result<i64, LytrError> {
+    match eval_expr(e, env, ret)? {
+        Val::I64(i) => Ok(i),
+        _ => Err(LytrError::Runtime {
+            code: "E_LYTR_RUNTIME",
+            span,
+            message: "expected i64".into(),
             fix_hint: "".into(),
         }),
     }

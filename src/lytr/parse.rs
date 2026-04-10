@@ -1,9 +1,9 @@
-//! Parser: edition `lytr/0.1` + `fn main() -> i32 { … }`.
+//! Parser: edition `lytr/0.1` + `fn main() -> i32` or `-> i64` `{ … }`.
 
 use crate::Span;
 
 use super::ast::{
-    BinOp, Block, CmpOp, Expr, FnItem, Program, Stmt, Ty,
+    BinOp, Block, CmpOp, Expr, FnItem, MainRetTy, Program, Stmt, Ty,
 };
 use super::error::LytrError;
 use super::lex::{tokenize, Token, TokenKind};
@@ -109,7 +109,24 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::LParen)?;
         self.expect(TokenKind::RParen)?;
         self.expect(TokenKind::Arrow)?;
-        self.expect(TokenKind::I32)?;
+        let ret = match self.cur().kind {
+            TokenKind::I32 => {
+                self.bump();
+                MainRetTy::I32
+            }
+            TokenKind::I64 => {
+                self.bump();
+                MainRetTy::I64
+            }
+            _ => {
+                return Err(LytrError::Syntax {
+                    code: "E_LYTR_PARSE",
+                    span: self.cur().span,
+                    message: "expected `i32` or `i64` after `->`".into(),
+                    fix_hint: "use `fn main() -> i32 { ... }` or `-> i64`".into(),
+                });
+            }
+        };
         let body = self.parse_block()?;
         self.expect(TokenKind::Eof)?;
         let prog_end = body.span.end;
@@ -117,6 +134,7 @@ impl<'a> Parser<'a> {
             span: Span::new(prog_start, prog_end),
             main: FnItem {
                 name_span: main_tok.span,
+                ret,
                 body,
             },
         })
@@ -188,6 +206,10 @@ impl<'a> Parser<'a> {
                 self.bump();
                 Ok(Ty::I32)
             }
+            TokenKind::I64 => {
+                self.bump();
+                Ok(Ty::I64)
+            }
             TokenKind::Bool => {
                 self.bump();
                 Ok(Ty::Bool)
@@ -195,16 +217,62 @@ impl<'a> Parser<'a> {
             TokenKind::Result => {
                 self.bump();
                 self.expect(TokenKind::Lt)?;
-                self.expect(TokenKind::I32)?;
+                let t1 = match self.cur().kind {
+                    TokenKind::I32 => {
+                        self.bump();
+                        Ty::I32
+                    }
+                    TokenKind::I64 => {
+                        self.bump();
+                        Ty::I64
+                    }
+                    _ => {
+                        return Err(LytrError::Syntax {
+                            code: "E_LYTR_PARSE",
+                            span: self.cur().span,
+                            message: "expected `i32` or `i64` in `Result<…>`".into(),
+                            fix_hint: "use `Result<i32, i32>` or `Result<i64, i64>`".into(),
+                        });
+                    }
+                };
                 self.expect(TokenKind::Comma)?;
-                self.expect(TokenKind::I32)?;
+                let t2 = match self.cur().kind {
+                    TokenKind::I32 => {
+                        self.bump();
+                        Ty::I32
+                    }
+                    TokenKind::I64 => {
+                        self.bump();
+                        Ty::I64
+                    }
+                    _ => {
+                        return Err(LytrError::Syntax {
+                            code: "E_LYTR_PARSE",
+                            span: self.cur().span,
+                            message: "expected `i32` or `i64` after `,` in `Result`".into(),
+                            fix_hint: "both type arguments must match (bootstrap)".into(),
+                        });
+                    }
+                };
                 self.expect(TokenKind::Gt)?;
-                Ok(Ty::ResultI32)
+                if t1 != t2 {
+                    return Err(LytrError::Syntax {
+                        code: "E_LYTR_PARSE",
+                        span: self.cur().span,
+                        message: "`Result<T, U>` requires `T` and `U` equal in bootstrap".into(),
+                        fix_hint: "use `Result<i32, i32>` or `Result<i64, i64>`".into(),
+                    });
+                }
+                match t1 {
+                    Ty::I32 => Ok(Ty::ResultI32),
+                    Ty::I64 => Ok(Ty::ResultI64),
+                    _ => unreachable!(),
+                }
             }
             _ => Err(LytrError::Syntax {
                 code: "E_LYTR_PARSE",
                 span: self.cur().span,
-                message: "expected `i32`, `bool`, or `Result<i32, i32>`".into(),
+                message: "expected `i32`, `i64`, `bool`, or `Result<…>`".into(),
                 fix_hint: "bootstrap types only".into(),
             }),
         }

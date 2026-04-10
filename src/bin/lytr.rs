@@ -4,7 +4,9 @@ use std::env;
 use std::fs;
 use std::process::ExitCode;
 
-use lir::{check_lytr_program, cli_json_line, parse_lytr_program, run_lytr_program};
+use lir::{
+    check_lytr_program, cli_json_line, parse_lytr_program, run_lytr_program, LytrRun,
+};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -58,7 +60,11 @@ fn main() -> ExitCode {
                 return ExitCode::SUCCESS;
             }
             match run_lytr_program(&prog) {
-                Ok(v) => {
+                Ok(LytrRun::I32(v)) => {
+                    println!("{v}");
+                    ExitCode::SUCCESS
+                }
+                Ok(LytrRun::I64(v)) => {
                     println!("{v}");
                     ExitCode::SUCCESS
                 }
@@ -86,7 +92,7 @@ fn main() -> ExitCode {
 fn print_usage() {
     eprintln!(
         "\
-lytr — LYTR 0.1 bootstrap (tiny subset: lytr/0.1 + fn main() -> i32 {{ return expr; }})
+lytr — LYTR 0.1 bootstrap (lytr/0.1 + fn main() -> i32 | i64 {{ … }})
 
 Commands:
   check <file.lytr>   Parse, type-check

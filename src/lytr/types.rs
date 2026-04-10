@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::Span;
 
-use super::ast::{Expr, Program, Stmt, Ty};
+use super::ast::{Expr, MainRetTy, Program, Stmt, Ty};
 use super::error::LytrError;
 
 pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
@@ -37,6 +37,16 @@ pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
         }
     }
 
+    let int_ty = match prog.main.ret {
+        MainRetTy::I32 => Ty::I32,
+        MainRetTy::I64 => Ty::I64,
+    };
+    let res_ty = match int_ty {
+        Ty::I32 => Ty::ResultI32,
+        Ty::I64 => Ty::ResultI64,
+        _ => unreachable!(),
+    };
+
     let mut env: HashMap<String, Ty> = HashMap::new();
     for st in &prog.main.body.stmts {
         match st {
@@ -47,7 +57,7 @@ pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
                 name_span,
                 ..
             } => {
-                let got = type_expr(init, &env)?;
+                let got = type_expr(init, &env, int_ty, res_ty)?;
                 if let Some(decl) = ty {
                     if !ty_compatible(decl, &got) {
                         return Err(LytrError::Type {
@@ -63,13 +73,13 @@ pub fn check_lytr_program(prog: &Program) -> Result<(), LytrError> {
                 env.insert(name.clone(), got);
             }
             Stmt::Return { expr, span } => {
-                let t = type_expr(expr, &env)?;
-                if t != Ty::I32 {
+                let t = type_expr(expr, &env, int_ty, res_ty)?;
+                if t != int_ty {
                     return Err(LytrError::Type {
                         code: "E_LYTR_TYPE",
                         span: *span,
-                        message: format!("`main` must return i32, got {t:?}"),
-                        fix_hint: "return an i32 expression".into(),
+                        message: format!("`main` must return {int_ty:?}, got {t:?}"),
+                        fix_hint: "match the function's `-> i32` or `-> i64`".into(),
                     });
                 }
             }
@@ -82,11 +92,32 @@ fn ty_compatible(decl: &Ty, got: &Ty) -> bool {
     decl == got
 }
 
-fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
+fn type_expr(
+    e: &Expr,
+    env: &HashMap<String, Ty>,
+    int_ty: Ty,
+    res_ty: Ty,
+) -> Result<Ty, LytrError> {
+    debug_assert!(matches!(int_ty, Ty::I32 | Ty::I64));
+    debug_assert!(matches!(res_ty, Ty::ResultI32 | Ty::ResultI64));
+
     match e {
-        Expr::Int { span, .. } => {
-            let _ = span;
-            Ok(Ty::I32)
+        Expr::Int { value, span } => {
+            match int_ty {
+                Ty::I32 => {
+                    if *value < i32::MIN as i64 || *value > i32::MAX as i64 {
+                        return Err(LytrError::Type {
+                            code: "E_LYTR_TYPE",
+                            span: *span,
+                            message: format!("literal `{value}` is out of range for i32"),
+                            fix_hint: "use a smaller literal or `fn main() -> i64`".into(),
+                        });
+                    }
+                    Ok(Ty::I32)
+                }
+                Ty::I64 => Ok(Ty::I64),
+                _ => unreachable!(),
+            }
         }
         Expr::BoolLit { span, .. } => {
             let _ = span;
@@ -99,27 +130,27 @@ fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
             fix_hint: "define with `let` first".into(),
         }),
         Expr::Binary { left, right, span, .. } => {
-            let a = type_expr(left, env)?;
-            let b = type_expr(right, env)?;
-            if a != Ty::I32 || b != Ty::I32 {
+            let a = type_expr(left, env, int_ty, res_ty)?;
+            let b = type_expr(right, env, int_ty, res_ty)?;
+            if a != int_ty || b != int_ty {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
                     span: *span,
-                    message: "arithmetic expects i32 operands".into(),
-                    fix_hint: "use i32 expressions".into(),
+                    message: format!("arithmetic expects two `{int_ty:?}` operands"),
+                    fix_hint: "use the same integer type as `main`".into(),
                 });
             }
-            Ok(Ty::I32)
+            Ok(int_ty)
         }
         Expr::Cmp { left, right, span, .. } => {
-            let a = type_expr(left, env)?;
-            let b = type_expr(right, env)?;
-            if a != Ty::I32 || b != Ty::I32 {
+            let a = type_expr(left, env, int_ty, res_ty)?;
+            let b = type_expr(right, env, int_ty, res_ty)?;
+            if a != int_ty || b != int_ty {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
                     span: *span,
-                    message: "comparison expects i32 operands".into(),
-                    fix_hint: "compare i32 values".into(),
+                    message: format!("comparison expects two `{int_ty:?}` operands"),
+                    fix_hint: "compare values of the same integer type as `main`".into(),
                 });
             }
             Ok(Ty::Bool)
@@ -130,7 +161,7 @@ fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
             else_b,
             span,
         } => {
-            let tc = type_expr(cond, env)?;
+            let tc = type_expr(cond, env, int_ty, res_ty)?;
             if tc != Ty::Bool {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
@@ -139,8 +170,8 @@ fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
                     fix_hint: "use a comparison or `true`/`false`".into(),
                 });
             }
-            let t1 = type_expr(then_b, env)?;
-            let t2 = type_expr(else_b, env)?;
+            let t1 = type_expr(then_b, env, int_ty, res_ty)?;
+            let t2 = type_expr(else_b, env, int_ty, res_ty)?;
             if t1 != t2 {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
@@ -152,28 +183,28 @@ fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
             Ok(t1)
         }
         Expr::Ok(inner) => {
-            let t = type_expr(inner, env)?;
-            if t != Ty::I32 {
+            let t = type_expr(inner, env, int_ty, res_ty)?;
+            if t != int_ty {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
                     span: expr_span(inner),
-                    message: "`Ok` payload must be i32 in this bootstrap".into(),
-                    fix_hint: "use `Ok(0)` style i32 payload".into(),
+                    message: format!("`Ok` payload must be `{int_ty:?}`"),
+                    fix_hint: "match `Result<…>` to main's integer type".into(),
                 });
             }
-            Ok(Ty::ResultI32)
+            Ok(res_ty)
         }
         Expr::Err(inner) => {
-            let t = type_expr(inner, env)?;
-            if t != Ty::I32 {
+            let t = type_expr(inner, env, int_ty, res_ty)?;
+            if t != int_ty {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
                     span: expr_span(inner),
-                    message: "`Err` payload must be i32 in this bootstrap".into(),
-                    fix_hint: "use `Err(0)` style i32 payload".into(),
+                    message: format!("`Err` payload must be `{int_ty:?}`"),
+                    fix_hint: "match `Result<…>` to main's integer type".into(),
                 });
             }
-            Ok(Ty::ResultI32)
+            Ok(res_ty)
         }
         Expr::Match {
             scrutinee,
@@ -184,21 +215,21 @@ fn type_expr(e: &Expr, env: &HashMap<String, Ty>) -> Result<Ty, LytrError> {
             span,
             ..
         } => {
-            let ts = type_expr(scrutinee, env)?;
-            if ts != Ty::ResultI32 {
+            let ts = type_expr(scrutinee, env, int_ty, res_ty)?;
+            if ts != res_ty {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",
                     span: *span,
-                    message: "`match` scrutinee must be Result<i32,i32>".into(),
-                    fix_hint: "use `Ok(…)` or `Err(…)`".into(),
+                    message: format!("`match` scrutinee must be `{res_ty:?}`"),
+                    fix_hint: "use `Ok(…)` or `Err(…)` with matching `Result` type".into(),
                 });
             }
             let mut env_ok = env.clone();
-            env_ok.insert(ok_name.clone(), Ty::I32);
+            env_ok.insert(ok_name.clone(), int_ty);
             let mut env_err = env.clone();
-            env_err.insert(err_name.clone(), Ty::I32);
-            let t_ok = type_expr(ok_arm, &env_ok)?;
-            let t_err = type_expr(err_arm, &env_err)?;
+            env_err.insert(err_name.clone(), int_ty);
+            let t_ok = type_expr(ok_arm, &env_ok, int_ty, res_ty)?;
+            let t_err = type_expr(err_arm, &env_err, int_ty, res_ty)?;
             if t_ok != t_err {
                 return Err(LytrError::Type {
                     code: "E_LYTR_TYPE",

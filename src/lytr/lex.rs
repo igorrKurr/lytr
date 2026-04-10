@@ -16,6 +16,7 @@ pub enum TokenKind {
     False,
     Bool,
     I32,
+    I64,
     Result,
     Ok,
     Err,
@@ -42,7 +43,7 @@ pub enum TokenKind {
     Slash,
     Percent,
     Ident, // name = src[span]
-    Int(i32),
+    Int(i64),
     Eof,
 }
 
@@ -130,6 +131,7 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
                 "false" => TokenKind::False,
                 "bool" => TokenKind::Bool,
                 "i32" => TokenKind::I32,
+                "i64" => TokenKind::I64,
                 "Result" => TokenKind::Result,
                 "Ok" => TokenKind::Ok,
                 "Err" => TokenKind::Err,
@@ -149,11 +151,11 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
             let slice = &src[j..i];
             let end = base + i;
             let span = Span::new(start, end);
-            let v: i32 = slice.parse().map_err(|_| LytrError::Syntax {
+            let v: i64 = slice.parse().map_err(|_| LytrError::Syntax {
                 code: "E_LYTR_INT",
                 span,
                 message: format!("invalid integer literal `{slice}`"),
-                fix_hint: "use a decimal i32 literal".into(),
+                fix_hint: "use a decimal literal".into(),
             })?;
             out.push(Token {
                 kind: TokenKind::Int(v),

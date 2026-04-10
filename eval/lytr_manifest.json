@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "tier": "LYTR",
-  "description": "LYTR bootstrap numeric parity with Tier A Python baselines (closed-form programs). Excludes 006_i64_lit_sum (bootstrap i32-only); excludes 009–011 (LIR fmt/syntax harness). See eval/README.md §LYTR eval.",
+  "description": "LYTR bootstrap numeric parity with Tier A Python baselines (closed-form programs). Task 006 uses `fn main() -> i64`. Excludes 009–011 (LIR fmt/syntax harness). See eval/README.md §LYTR eval.",
   "tasks": [
     {
       "id": "001_range_sum",
@@ -41,6 +41,14 @@
       "assertions": [
         { "kind": "lytr_check", "expect_exit": 0 },
         { "kind": "lytr_run", "expect_stdout": "5\n" }
+      ]
+    },
+    {
+      "id": "006_i64_lit_sum",
+      "starter": "lytr_tasks/006_i64_lit_sum/program.lytr",
+      "assertions": [
+        { "kind": "lytr_check", "expect_exit": 0 },
+        { "kind": "lytr_run", "expect_stdout": "6000000000\n" }
       ]
     },
     {

@@ -16,7 +16,7 @@ Same as `bash eval/run_local.sh`.
 
 ## LYTR eval (`lytr_manifest.json`)
 
-**[`lytr_manifest.json`](lytr_manifest.json)** is the LYTR bootstrap regression suite: **`lytr check`** / **`lytr run`** on reference **`.lytr`** programs under **`eval/lytr_tasks/<task_id>/`**, with expected stdout aligned to the **same numeric outcomes** as the frozen Python baselines for tasks **001–005, 007–008, 012–020** (see [`baseline/python/run_all.py`](baseline/python/run_all.py)). Task **006** (i64) is omitted until the bootstrap gains **i64**; tasks **009–011** are LIR-only (fmt / negative).
+**[`lytr_manifest.json`](lytr_manifest.json)** is the LYTR bootstrap regression suite: **`lytr check`** / **`lytr run`** on reference **`.lytr`** programs under **`eval/lytr_tasks/<task_id>/`**, with expected stdout aligned to the **same numeric outcomes** as the frozen Python baselines for tasks **001–008, 012–020** (see [`baseline/python/run_all.py`](baseline/python/run_all.py)). Task **006** uses **`fn main() -> i64`**; other tasks use **`i32`**. Tasks **009–011** are LIR-only (fmt / negative).
 
 ```bash
 python3 eval/run_lytr_tier.py

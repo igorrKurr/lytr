@@ -46,8 +46,8 @@ LYTR_SYSTEM = """You output ONLY a valid LYTR 0.1 program (bootstrap subset).
 
 Rules:
 - Line 1 must be exactly: lytr/0.1
-- Then: fn main() -> i32 { ... } with a single return expression (you may use let bindings and if/match on Result<i32,i32> per the language).
-- Types: i32, bool, Result<i32, i32>. No user generics. Integer arithmetic: + - * / %; comparisons: == != < > <= >=.
+- Then: fn main() -> i32 { ... } or fn main() -> i64 { ... } with a single return expression (you may use let bindings and if/match).
+- Types: i32, i64, bool, Result<i32, i32> or Result<i64, i64> (must match main's integer width). No user generics. Integer arithmetic: + - * / %; comparisons: == != < > <= >=.
 - The program must print one integer line to stdout (the i32 result of main) — same contract as the starter.
 
 Do not output LIR, Python, or prose before the program. Prefer raw lines starting with lytr/0.1 (no markdown fences).
