@@ -24,5 +24,10 @@
 | [LYTR_QUALITY_AND_SECURITY.md](LYTR_QUALITY_AND_SECURITY.md) | Fuzz, perf CI, supply chain |
 | [eval/README.md](../eval/README.md) | **Tier A** LIR eval harness |
 | [eval/BASELINE.md](../eval/BASELINE.md) | Optional incumbent comparison |
-| [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) | GP charter |
+| [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) | GP charter (**LYTR 0.1**) |
+| [LYTR_CORE_CALCULUS_DRAFT.md](LYTR_CORE_CALCULUS_DRAFT.md) | B1 types / surface calculus (draft) |
+| [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md) | B2 effects + FFI (draft) |
+| [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md) | LYIR lowering (draft) |
+| [PHASE5_BOOTSTRAP.md](PHASE5_BOOTSTRAP.md) | Phase 5 parse/run milestone (after papers) |
+| [EXPERIMENT_PILOT_LLM_AB.md](EXPERIMENT_PILOT_LLM_AB.md) | Phase 4 pilot A/B conclusion |
 | [LYTR_MEMORY_OPTIONS_DRAFT.md](LYTR_MEMORY_OPTIONS_DRAFT.md) | Memory model options |

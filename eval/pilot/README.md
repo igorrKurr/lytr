@@ -2,6 +2,8 @@
 
 **Goal:** same four tasks, same model settings, compare pass rate and tokens between:
 
+**Phase 4 experiment record (conclusion one-pager):** [`docs/EXPERIMENT_PILOT_LLM_AB.md`](../../docs/EXPERIMENT_PILOT_LLM_AB.md).
+
 - **LIR arm:** [`run_llm_eval.py`](../run_llm_eval.py) with [`lir_manifest.json`](lir_manifest.json) (full LIR assertions + optional canonicalize / retry).
 - **Python arm:** [`run_llm_python_eval.py`](../run_llm_python_eval.py) with [`python_manifest.json`](python_manifest.json) (stdout must match `expect_stdout`; stdlib only).
 

@@ -13,7 +13,8 @@
   "cli": {
     "check_command": "lir codegen-check <file.lir>",
     "emit_llvm": "lir compile -o out.ll <file.lir>",
-    "emit_wasm": "lir wasm -o out.wasm <file.lir>"
+    "emit_wasm": "lir wasm -o out.wasm <file.lir>",
+    "membership_without_emit": "Phase 0 optional probe: `lir codegen-check` verifies subset membership without writing IR (same role as a hypothetical `compile --supported-only`)."
   },
   "related_docs": [
     "docs/LLVM_ABI.md",

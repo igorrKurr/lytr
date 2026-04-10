@@ -1,6 +1,10 @@
 # LYTR charter (draft)
 
+**Edition name:** **LYTR 0.1** (first GP snapshot; header line likely `lytr/0.1` — finalize with [LYTR_PLATFORM_AND_EDITIONS_DRAFT.md](LYTR_PLATFORM_AND_EDITIONS_DRAFT.md)).
+
 **LYTR** is the general-purpose language layered on **LIR** (see [NAMING.md](NAMING.md)). This charter is a working draft for Phase 5 of [LYTR_GLOBAL_IMPLEMENTATION_PLAN.md](LYTR_GLOBAL_IMPLEMENTATION_PLAN.md).
+
+**Related drafts (B0–B2 + lowering):** [LYTR_CORE_CALCULUS_DRAFT.md](LYTR_CORE_CALCULUS_DRAFT.md) (core calculus / types), [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md) (effects + FFI), [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md) (LYIR), [PHASE5_BOOTSTRAP.md](PHASE5_BOOTSTRAP.md) (implementation milestone after papers).
 
 ## Goals (v0.1 target)
 
