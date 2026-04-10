@@ -42,8 +42,14 @@ COMPARISON_JSON=1 python3 eval/run_comparison.py
 # Explicit summary path
 python3 eval/run_comparison.py --json-out eval/comparison_summary.json
 
-# Include live LLM eval (requires OPENAI_API_KEY; costs tokens; logs eval/results_llm.ndjson)
+# Include live LIR LLM eval (requires OPENAI_API_KEY; costs tokens; logs eval/results_llm.ndjson)
 python3 eval/run_comparison.py --llm
+
+# Live LYTR LLM eval only (logs eval/results_llm_lytr.ndjson)
+python3 eval/run_comparison.py --llm-lytr
+
+# Both LLM arms
+python3 eval/run_comparison.py --llm --llm-lytr
 ```
 
 Exit code is non-zero if any invoked step fails. **`comparison_summary.json`** records `tier_a`, `baseline_python`, optional `llm_eval` (exit + seconds), `git_rev` when available, and `schema_version`.

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
 Orchestrate a **local comparison dry run**: Tier A manifest (LIR CLI) + Python baselines + LYTR numeric parity (`run_lytr_tier.py`).
-Optional **`--llm`** runs live [`run_llm_eval.py`](run_llm_eval.py) (needs `OPENAI_API_KEY`, costs tokens).
+Optional **`--llm`** runs live [`run_llm_eval.py`](run_llm_eval.py); **`--llm-lytr`** runs [`run_llm_lytr_eval.py`](run_llm_lytr_eval.py) (each needs `OPENAI_API_KEY`, costs tokens).
 
-Does not replace CI (CI still runs `run_tier_a`, baseline, and `run_llm_eval --dry-run` separately).
+Does not replace CI (CI still runs `run_tier_a`, baseline, and LLM harness `--dry-run` scripts separately).
 Use this when you are ready to **record** a comparison session (wall time; LLM tokens in `results_llm.ndjson`).
 
 Usage (repo root):
   python3 eval/run_comparison.py
   python3 eval/run_comparison.py --llm
+  python3 eval/run_comparison.py --llm-lytr
+  python3 eval/run_comparison.py --llm --llm-lytr
   python3 eval/run_comparison.py --json-out eval/comparison_summary.json
   COMPARISON_JSON=1 python3 eval/run_comparison.py
 """
@@ -54,7 +56,13 @@ def main() -> int:
     ap.add_argument(
         "--llm",
         action="store_true",
-        help="Also run live LLM eval (requires OPENAI_API_KEY; costs tokens)",
+        help="Also run live LIR LLM eval (requires OPENAI_API_KEY; costs tokens)",
+    )
+    ap.add_argument(
+        "--llm-lytr",
+        action="store_true",
+        dest="llm_lytr",
+        help="Also run live LYTR LLM eval (requires OPENAI_API_KEY; costs tokens)",
     )
     ap.add_argument(
         "--json-out",
@@ -89,22 +97,38 @@ def main() -> int:
         _maybe_write_json(args, ts, steps)
         return code
 
-    if args.llm:
+    want_llm = args.llm or args.llm_lytr
+    if want_llm:
         if not os.environ.get("OPENAI_API_KEY", "").strip():
-            print("error: --llm requires OPENAI_API_KEY", file=sys.stderr)
-            _print_summary(ts, steps, skipped_llm="missing OPENAI_API_KEY (cannot run llm_eval)")
+            print("error: --llm / --llm-lytr require OPENAI_API_KEY", file=sys.stderr)
+            _print_summary(
+                ts,
+                steps,
+                skipped_llm="missing OPENAI_API_KEY (cannot run LLM evals)",
+            )
             _maybe_write_json(args, ts, steps)
             return 2
-        code, sec = _run_step([py, str(ROOT / "eval" / "run_llm_eval.py")])
-        steps["llm_eval"] = {"exit_code": code, "seconds": round(sec, 3)}
+        if args.llm:
+            code, sec = _run_step([py, str(ROOT / "eval" / "run_llm_eval.py")])
+            steps["llm_eval"] = {"exit_code": code, "seconds": round(sec, 3)}
+            if code != 0:
+                _print_summary(ts, steps, skipped_llm=None)
+                _maybe_write_json(args, ts, steps)
+                return code
+        if args.llm_lytr:
+            code, sec = _run_step([py, str(ROOT / "eval" / "run_llm_lytr_eval.py")])
+            steps["llm_lytr_eval"] = {"exit_code": code, "seconds": round(sec, 3)}
+            _print_summary(ts, steps, skipped_llm=None)
+            _maybe_write_json(args, ts, steps)
+            return code
         _print_summary(ts, steps, skipped_llm=None)
         _maybe_write_json(args, ts, steps)
-        return code
+        return 0
 
     _print_summary(
         ts,
         steps,
-        skipped_llm="pass --llm and OPENAI_API_KEY for live LLM grading (costs tokens)",
+        skipped_llm="pass --llm and/or --llm-lytr with OPENAI_API_KEY for live LLM grading (costs tokens)",
     )
     _maybe_write_json(args, ts, steps)
     return 0
@@ -116,7 +140,7 @@ def _print_summary(ts: str, steps: dict, skipped_llm: str | None) -> None:
         status = "PASS" if data["exit_code"] == 0 else "FAIL"
         print(f"  {name:20} {status}  ({data['seconds']}s)  exit={data['exit_code']}")
     if skipped_llm:
-        print(f"  {'llm_eval':20} SKIP  — {skipped_llm}")
+        print(f"  {'llm (optional)':20} SKIP  — {skipped_llm}")
 
 
 def _maybe_write_json(args: argparse.Namespace, ts: str, steps: dict) -> None:
@@ -137,9 +161,10 @@ def _write_json(path: Path, ts: str, steps: dict) -> None:
         "baseline_python": steps.get("baseline_python"),
         "lytr_tier": steps.get("lytr_tier"),
         "llm_eval": steps.get("llm_eval"),
+        "llm_lytr_eval": steps.get("llm_lytr_eval"),
         "notes": (
             "Agent turns and subjective effort are recorded outside this repo; "
-            "LLM prompt/completion tokens appear in eval/results_llm.ndjson per assertion when llm_eval runs."
+            "LLM tokens: eval/results_llm.ndjson (LIR), eval/results_llm_lytr.ndjson (LYTR)."
         ),
     }
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")

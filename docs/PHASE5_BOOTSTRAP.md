@@ -43,6 +43,6 @@ The bootstrap in this file is **step 0** of that loop: a runnable core so semant
 1. Blocks with **multiple** statements before `return`; richer `match` / exhaustiveness as in calculus drafts.
 2. Align `Result` and effects with [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md) (payload types, not only `i32`).
 3. LIR embed surface and LYIR lowering per [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md).
-4. **Eval:** **Regression:** [`eval/run_lytr_tier.py`](../eval/run_lytr_tier.py) + [`eval/lytr_manifest.json`](../eval/lytr_manifest.json) (stdout parity with Tier A numeric baselines). **Next:** LLM grading harness for `.lytr` (mirror `run_llm_eval.py`) + live pipeline-cost A/B vs LIR/Python on the same task ids.
+4. **Eval:** **Regression:** [`eval/run_lytr_tier.py`](../eval/run_lytr_tier.py) + [`eval/lytr_manifest.json`](../eval/lytr_manifest.json) (stdout parity with Tier A numeric baselines). **LLM:** [`eval/run_llm_lytr_eval.py`](../eval/run_llm_lytr_eval.py) (same manifest; logs `results_llm_lytr.ndjson`). **Next:** aggregate pipeline-cost reports (tokens-to-success) vs LIR/Python on matched task ids; optional pilot-style frozen comparison JSON.
 
 **Paper track:** [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md), [LYTR_CORE_CALCULUS_DRAFT.md](LYTR_CORE_CALCULUS_DRAFT.md), [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md), [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md).

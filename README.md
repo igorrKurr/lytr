@@ -21,4 +21,4 @@
 
 ## Tier A eval (LIR)
 
-[eval/README.md](eval/README.md) — `python3 eval/run_tier_a.py` (LIR manifest + optional `tasks/*/hidden/assertions.json`); **`python3 eval/run_lytr_tier.py`** (LYTR numeric parity vs the same task ids); CI also runs Python baselines and `run_llm_eval.py --dry-run`. **`python3 eval/run_comparison.py`** runs Tier A + Python baseline + LYTR tier together (optional `--llm`); see [eval/BASELINE.md](eval/BASELINE.md). Measures agent-relevant surface **before** full LYTR GP.
+[eval/README.md](eval/README.md) — `python3 eval/run_tier_a.py` (LIR manifest + optional `tasks/*/hidden/assertions.json`); **`python3 eval/run_lytr_tier.py`** (LYTR numeric parity vs the same task ids); CI also runs Python baselines, `run_llm_eval.py --dry-run`, and `run_llm_lytr_eval.py --dry-run`. **`python3 eval/run_comparison.py`** runs Tier A + Python baseline + LYTR tier together (optional `--llm`, `--llm-lytr`); see [eval/BASELINE.md](eval/BASELINE.md). Measures agent-relevant surface **before** full LYTR GP.

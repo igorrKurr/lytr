@@ -5,6 +5,7 @@
 eval/results.ndjson
 eval/results_lytr.ndjson
 eval/results_llm.ndjson
+eval/results_llm_lytr.ndjson
 eval/comparison_summary.json
 eval/results_pilot_*.ndjson
 eval/results_pilot_comparison_*.json

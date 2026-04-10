@@ -24,6 +24,8 @@ jobs:
         run: python3 eval/baseline/python/run_all.py
       - name: Tier A LLM harness (dry-run, no API)
         run: python3 eval/run_llm_eval.py --dry-run
+      - name: LYTR LLM harness (dry-run, no API)
+        run: python3 eval/run_llm_lytr_eval.py --dry-run
       - name: A/B pilot (LIR + Python LLM harness, dry-run)
         run: python3 eval/run_pilot_ab.py --dry-run
       - name: Pilot regression (fixture vs frozen baseline)

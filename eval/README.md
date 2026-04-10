@@ -32,7 +32,7 @@ When the fallback **`cargo run`** is used, the harness sets **`RUSTFLAGS`** to i
 
 **Exit 0** = all assertions passed; **exit 1** = at least one failure. Lines are appended to `eval/results.ndjson` (gitignored).
 
-CI also runs **`eval/baseline/python/run_all.py`** and **`eval/run_llm_eval.py --dry-run`** after the manifest eval (no API key required).
+CI also runs **`eval/baseline/python/run_all.py`**, **`eval/run_llm_eval.py --dry-run`**, and **`eval/run_llm_lytr_eval.py --dry-run`** after the manifest eval (no API key required).
 
 ## Comparison run (local)
 
@@ -98,6 +98,18 @@ Environment:
 Each `llm_response` line includes **`tokens_prompt`** / **`tokens_completion`** from the API (billing) and **`tokens_prompt_system`** / **`tokens_prompt_user`**: tiktoken counts of the system and first user message bodies only (no chat framing). Install **`tiktoken`** for accuracy (`pip install -r eval/requirements-eval.txt`); without it, a rough character fallback is used.
 
 **Exit codes:** `0` = all assertions passed; `1` = at least one failure; `2` = missing `OPENAI_API_KEY` (and not `--dry-run`). NDJSON lines are appended to **`eval/results_llm.ndjson`** (gitignored): per-assertion records (including **`stderr_got`** when a check/run fails), `llm_response` lines with **`lir_preview`**, and merged `tokens_*` when a retry runs.
+
+## LYTR LLM eval (`run_llm_lytr_eval.py`)
+
+[`run_llm_lytr_eval.py`](run_llm_lytr_eval.py) mirrors **`run_llm_eval.py`** but uses **[`lytr_manifest.json`](lytr_manifest.json)** and **`lytr check` / `lytr run`** assertions (`lytr_check`, `lytr_run`). Default manifest path **`eval/lytr_manifest.json`**; logs **`eval/results_llm_lytr.ndjson`**. **`LLM_RETRY_ON_FAIL`** triggers a second turn when **`lytr check`** fails (no `lir fmt` step — bootstrap has no formatter yet).
+
+```bash
+python3 eval/run_llm_lytr_eval.py --dry-run
+OPENAI_API_KEY=... python3 eval/run_llm_lytr_eval.py
+OPENAI_API_KEY=... python3 eval/run_llm_lytr_eval.py --task 001_range_sum
+```
+
+Use this to measure **tokens-to-success** for LYTR on the same **task ids** as the numeric parity harness, for comparison with LIR and Python LLM evals.
 
 ## Baseline comparison (Python)
 
