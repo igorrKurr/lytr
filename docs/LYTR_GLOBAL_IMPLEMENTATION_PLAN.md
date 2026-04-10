@@ -196,7 +196,9 @@ Phases **interleave** foundation (**LIR** + tooling + eval), **LYTR**, and **per
 - Tiny LYTR programs **parse, check, run** (interpreter or compiled stub).
 - Charter approved; non-goals prevent unbounded scope creep.
 
-**Paper track (this repo):** **B0** [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) (edition **LYTR 0.1**); **B1** [LYTR_CORE_CALCULUS_DRAFT.md](LYTR_CORE_CALCULUS_DRAFT.md); **B2** [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md); **lowering** [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md). **Implementation** of the parse/check/run milestone is tracked in [PHASE5_BOOTSTRAP.md](PHASE5_BOOTSTRAP.md) (follows papers).
+**Paper track (this repo):** **B0** [LYTR_CHARTER_DRAFT.md](LYTR_CHARTER_DRAFT.md) (edition **LYTR 0.1**); **B1** [LYTR_CORE_CALCULUS_DRAFT.md](LYTR_CORE_CALCULUS_DRAFT.md); **B2** [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md); **lowering** [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md).
+
+**Bootstrap implementation (minimal exit):** the **`lytr`** binary and [`src/lytr/`](../src/lytr/) satisfy *parse, check, run* for the subset in [PHASE5_BOOTSTRAP.md](PHASE5_BOOTSTRAP.md) (example [`examples/minimal.lytr`](../examples/minimal.lytr)). Full LYTR 0.1 surface remains future work; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 ---
 
@@ -372,7 +374,7 @@ Record **date**, **decision**, **alternatives rejected**, **metric or principle*
 2. **Phase 1 (done in repo):** `lir fmt --check`; broader CLI JSON lines (`cli_json_line`); [`AGENTS.md`](../AGENTS.md).
 3. **Phase 2 (LIR AST JSON — in repo):** [`LIR_AST_JSON.md`](LIR_AST_JSON.md), [`schemas/lir_ast_v1.schema.json`](../schemas/lir_ast_v1.schema.json), **`lir dump-ast`** / **`lir apply-ast`**, [`tests/ast_json_roundtrip.rs`](../tests/ast_json_roundtrip.rs).
 4. **Phase 3 (Tier A — in repo):** [`eval/README.md`](../eval/README.md), [`eval/manifest.json`](../eval/manifest.json), **`python3 eval/run_tier_a.py`** (20 tasks), shared [`eval/tier_a_lib.py`](../eval/tier_a_lib.py) (optional **`tasks/*/hidden/assertions.json`** merged after manifest), **`python3 eval/run_llm_eval.py`** (OpenAI-compatible chat + NDJSON usage fields; `--dry-run` in CI), [`eval/baseline/python/run_all.py`](../eval/baseline/python/run_all.py) vs [`eval/BASELINE.md`](../eval/BASELINE.md). **Pilot A/B + thesis metrics:** [`eval/run_pilot_ab.py`](../eval/run_pilot_ab.py), [`eval/pilot_comparison.py`](../eval/pilot_comparison.py), [`eval/pilot_thesis_metrics.py`](../eval/pilot_thesis_metrics.py). **Regression vs frozen baseline:** [`eval/baselines/pilot_ab_reference.json`](../eval/baselines/pilot_ab_reference.json) + [`eval/pilot_regression.py`](../eval/pilot_regression.py). Optional next: scheduled live LLM eval with a repo secret; widen frozen task set for stable baselines.
-5. **Phase 5 (paper — B0–B2 + lowering in repo):** [`LYTR_CHARTER_DRAFT.md`](LYTR_CHARTER_DRAFT.md) (**LYTR 0.1**), [`LYTR_CORE_CALCULUS_DRAFT.md`](LYTR_CORE_CALCULUS_DRAFT.md), [`LYTR_EFFECTS_AND_FFI_DRAFT.md`](LYTR_EFFECTS_AND_FFI_DRAFT.md), [`LYTR_LOWERING_SKETCH.md`](LYTR_LOWERING_SKETCH.md); **implementation bootstrap:** [`PHASE5_BOOTSTRAP.md`](PHASE5_BOOTSTRAP.md).
+5. **Phase 5 (paper + minimal `lytr` in repo):** [`LYTR_CHARTER_DRAFT.md`](LYTR_CHARTER_DRAFT.md) (**LYTR 0.1**), [`LYTR_CORE_CALCULUS_DRAFT.md`](LYTR_CORE_CALCULUS_DRAFT.md), [`LYTR_EFFECTS_AND_FFI_DRAFT.md`](LYTR_EFFECTS_AND_FFI_DRAFT.md), [`LYTR_LOWERING_SKETCH.md`](LYTR_LOWERING_SKETCH.md); **bootstrap:** [`PHASE5_BOOTSTRAP.md`](PHASE5_BOOTSTRAP.md), **`lytr`** binary, [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).
 6. **Phase 6 (paper started):** [`LYTR_MEMORY_OPTIONS_DRAFT.md`](LYTR_MEMORY_OPTIONS_DRAFT.md); formal decision still open (§8).
 
 ---

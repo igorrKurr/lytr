@@ -30,4 +30,5 @@
 | [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md) | LYIR lowering (draft) |
 | [PHASE5_BOOTSTRAP.md](PHASE5_BOOTSTRAP.md) | Phase 5 parse/run milestone (after papers) |
 | [EXPERIMENT_PILOT_LLM_AB.md](EXPERIMENT_PILOT_LLM_AB.md) | Phase 4 pilot A/B conclusion |
+| [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | Plan phases vs repo reality |
 | [LYTR_MEMORY_OPTIONS_DRAFT.md](LYTR_MEMORY_OPTIONS_DRAFT.md) | Memory model options |

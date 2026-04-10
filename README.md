@@ -5,7 +5,8 @@
 ## Current implementation (LIR tier)
 
 - **Spec:** [docs/LIR_V1_SPEC.md](docs/LIR_V1_SPEC.md)
-- **CLI:** `cargo run --bin lir -- --help` — `check`, `run`, `fmt`, `fmt --check`, `codegen-check`, `dump-ast`, `apply-ast`, `compile`, `wasm` (JSON AST: [docs/LIR_AST_JSON.md](docs/LIR_AST_JSON.md))
+- **CLI (LIR):** `cargo run --bin lir -- --help` — `check`, `run`, `fmt`, `fmt --check`, `codegen-check`, `dump-ast`, `apply-ast`, `compile`, `wasm` (JSON AST: [docs/LIR_AST_JSON.md](docs/LIR_AST_JSON.md))
+- **CLI (LYTR 0.1 bootstrap):** `cargo run --bin lytr -- --help` — `check`, `run` on a tiny subset ([`docs/PHASE5_BOOTSTRAP.md`](docs/PHASE5_BOOTSTRAP.md), [`examples/minimal.lytr`](examples/minimal.lytr))
 - **Tests:** `cargo test` (LLVM/WASM goldens need suitable `clang` on Linux CI)
 
 ## Roadmap & production
