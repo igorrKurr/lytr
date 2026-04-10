@@ -418,6 +418,7 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::RParen)?;
                 Ok(e)
             }
+            TokenKind::LBrace => self.parse_block_expr(),
             TokenKind::If => self.parse_if_expr(),
             TokenKind::Ok => self.parse_ok_expr(),
             TokenKind::Err => self.parse_err_expr(),
@@ -426,22 +427,48 @@ impl<'a> Parser<'a> {
                 code: "E_LYTR_PARSE",
                 span: t.span,
                 message: "expected expression".into(),
-                fix_hint: "literal, variable, `(`, `if`, `Ok`, `Err`, or `match`".into(),
+                fix_hint: "literal, variable, `(`, `{`, `if`, `Ok`, `Err`, or `match`".into(),
             }),
         }
+    }
+
+    /// After `=>` in `match`: either `{ … }` block or a single expression.
+    fn parse_match_arm_expr(&mut self) -> Result<Expr, LytrError> {
+        if self.cur().kind == TokenKind::LBrace {
+            self.parse_block_expr()
+        } else {
+            self.parse_expr()
+        }
+    }
+
+    /// `{` … `}` as an expression: zero or more `let …;` then one tail expression (no `;` after).
+    fn parse_block_expr(&mut self) -> Result<Expr, LytrError> {
+        let lb = self.expect(TokenKind::LBrace)?;
+        let mut stmts = Vec::new();
+        while self.cur().kind == TokenKind::Let {
+            stmts.push(self.parse_let_stmt()?);
+        }
+        let tail = self.parse_expr()?;
+        let rb = self.expect(TokenKind::RBrace)?;
+        let span = Span::new(lb.span.start, rb.span.end);
+        Ok(if stmts.is_empty() {
+            tail
+        } else {
+            Expr::Block {
+                stmts,
+                tail: Box::new(tail),
+                span,
+            }
+        })
     }
 
     fn parse_if_expr(&mut self) -> Result<Expr, LytrError> {
         let if_tok = self.expect(TokenKind::If)?;
         let cond = self.parse_expr()?;
-        self.expect(TokenKind::LBrace)?;
-        let then_b = self.parse_expr()?;
-        self.expect(TokenKind::RBrace)?;
+        let then_b = self.parse_block_expr()?;
         self.expect(TokenKind::Else)?;
-        self.expect(TokenKind::LBrace)?;
-        let else_b = self.parse_expr()?;
-        let rb = self.expect(TokenKind::RBrace)?;
-        let span = Span::new(if_tok.span.start, rb.span.end);
+        let else_b = self.parse_block_expr()?;
+        let span = Span::new(if_tok.span.start, expr_span(&else_b).end);
         Ok(Expr::If {
             cond: Box::new(cond),
             then_b: Box::new(then_b),
@@ -475,7 +502,7 @@ impl<'a> Parser<'a> {
         let (ok_name, ok_name_span) = self.expect_ident()?;
         self.expect(TokenKind::RParen)?;
         self.expect(TokenKind::FatArrow)?;
-        let ok_arm = self.parse_expr()?;
+        let ok_arm = self.parse_match_arm_expr()?;
         if self.cur().kind == TokenKind::Comma {
             self.bump();
         }
@@ -484,7 +511,7 @@ impl<'a> Parser<'a> {
         let (err_name, err_name_span) = self.expect_ident()?;
         self.expect(TokenKind::RParen)?;
         self.expect(TokenKind::FatArrow)?;
-        let err_arm = self.parse_expr()?;
+        let err_arm = self.parse_match_arm_expr()?;
         if self.cur().kind == TokenKind::Comma {
             self.bump();
         }
@@ -511,6 +538,7 @@ fn expr_span(e: &Expr) -> Span {
         | Expr::Binary { span, .. }
         | Expr::Cmp { span, .. }
         | Expr::If { span, .. }
+        | Expr::Block { span, .. }
         | Expr::Match { span, .. } => *span,
         Expr::Ok(inner) | Expr::Err(inner) => expr_span(inner),
     }

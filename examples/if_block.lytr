@@ -1,0 +1,11 @@
+lytr/0.1
+// `if` branches are block expressions: `{ let …; tail }` or `{ tail }`.
+fn main() -> i32 {
+  return if 1 < 2 {
+    let a = 10;
+    let b = 32;
+    a + b
+  } else {
+    0
+  };
+}

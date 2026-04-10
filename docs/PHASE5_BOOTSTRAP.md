@@ -32,15 +32,15 @@ The bootstrap in this file is **step 0** of that loop: a runnable core so semant
 - **Language:** first line `lytr/0.1`, then `fn main() -> i32` or `-> i64 { … }` with:
   - **`let`** (`let x: i32 = …;` or inferred `let x = …;`), types `i32`, `i64`, `bool`, `Result<i32, i32>` / `Result<i64, i64>` (integer width matches `main`);
   - **Arithmetic / compare:** `+ - * / %`, `== != < > <= >=`, unary `-` on literals;
-  - **`if`** expression: `if cond { e1 } else { e2 }` (condition must be `bool`);
+  - **`if`** expression: `if cond { e1 } else { e2 }` — each branch is a **block expression** `{ … }`: optional `let …;` bindings, then a tail value (same as Rust); bare `{ expr }` is allowed;
   - **`Ok` / `Err`** (i32 payloads only) and **`match`** with required `Ok(x) => …` and `Err(y) => …` arms;
   - **`return`** must be the **last** statement; only **`let`** may appear before it.
 - **Library API:** `parse_lytr_program`, `check_lytr_program`, `run_lytr_program` ([`src/lytr/`](../src/lytr/)).
-- **Examples:** [`examples/minimal.lytr`](../examples/minimal.lytr), [`examples/let_if.lytr`](../examples/let_if.lytr), [`examples/match.lytr`](../examples/match.lytr); tests in [`tests/lytr_bootstrap.rs`](../tests/lytr_bootstrap.rs).
+- **Examples:** [`examples/minimal.lytr`](../examples/minimal.lytr), [`examples/let_if.lytr`](../examples/let_if.lytr), [`examples/if_block.lytr`](../examples/if_block.lytr), [`examples/match.lytr`](../examples/match.lytr); tests in [`tests/lytr_bootstrap.rs`](../tests/lytr_bootstrap.rs).
 
 ## Next (expand LYTR 0.1)
 
-1. Blocks with **multiple** statements before `return`; richer `match` / exhaustiveness as in calculus drafts.
+1. Richer `match` / exhaustiveness, `main` body with more than `let`+`return` (e.g. tail expression), as in calculus drafts.
 2. Align `Result` and effects with [LYTR_EFFECTS_AND_FFI_DRAFT.md](LYTR_EFFECTS_AND_FFI_DRAFT.md) (payload types, not only `i32`).
 3. LIR embed surface and LYIR lowering per [LYTR_LOWERING_SKETCH.md](LYTR_LOWERING_SKETCH.md).
 4. **Eval:** **Regression:** [`eval/run_lytr_tier.py`](../eval/run_lytr_tier.py) + [`eval/lytr_manifest.json`](../eval/lytr_manifest.json) (stdout parity with Tier A numeric baselines). **LLM:** [`eval/run_llm_lytr_eval.py`](../eval/run_llm_lytr_eval.py) (same manifest; logs `results_llm_lytr.ndjson`). **Aggregate:** [`eval/summarize_llm_tracks.py`](../eval/summarize_llm_tracks.py) compares `results_llm.ndjson` vs `results_llm_lytr.ndjson` (last run per task, shared task ids, token ratios). **Next:** optional frozen baseline JSON for LLM tracks (like pilot); widen LYTR to full 16-task LLM runs for stable A/B.

@@ -82,6 +82,12 @@ pub enum Expr {
         else_b: Box<Expr>,
         span: Span,
     },
+    /// `{ let …; …; tail_expr }` — only `let` before the tail (no `return` inside).
+    Block {
+        stmts: Vec<Stmt>,
+        tail: Box<Expr>,
+        span: Span,
+    },
     Ok(Box<Expr>),
     Err(Box<Expr>),
     Match {

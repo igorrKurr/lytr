@@ -155,6 +155,45 @@ fn type_expr(
             }
             Ok(Ty::Bool)
         }
+        Expr::Block { stmts, tail, span } => {
+            for st in stmts {
+                if matches!(st, Stmt::Return { .. }) {
+                    return Err(LytrError::Type {
+                        code: "E_LYTR_TYPE",
+                        span: *span,
+                        message: "`return` is not allowed inside a `{ … }` expression block".into(),
+                        fix_hint: "end the block with a value expression, not `return`".into(),
+                    });
+                }
+            }
+            let mut env2 = env.clone();
+            for st in stmts {
+                if let Stmt::Let {
+                    name,
+                    ty,
+                    init,
+                    name_span,
+                    ..
+                } = st
+                {
+                    let got = type_expr(init, &env2, int_ty, res_ty)?;
+                    if let Some(decl) = ty {
+                        if !ty_compatible(decl, &got) {
+                            return Err(LytrError::Type {
+                                code: "E_LYTR_TYPE",
+                                span: *name_span,
+                                message: format!(
+                                    "initializer type {got:?} does not match `{name}: {decl:?}`"
+                                ),
+                                fix_hint: "fix type ascription or expression".into(),
+                            });
+                        }
+                    }
+                    env2.insert(name.clone(), got);
+                }
+            }
+            type_expr(tail, &env2, int_ty, res_ty)
+        }
         Expr::If {
             cond,
             then_b,
@@ -251,6 +290,7 @@ fn expr_span(e: &Expr) -> Span {
         | Expr::Binary { span, .. }
         | Expr::Cmp { span, .. }
         | Expr::If { span, .. }
+        | Expr::Block { span, .. }
         | Expr::Match { span, .. } => *span,
         Expr::Ok(inner) | Expr::Err(inner) => expr_span(inner),
     }

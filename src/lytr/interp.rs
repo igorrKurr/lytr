@@ -104,6 +104,16 @@ fn eval_expr(
                 Ok(Val::Bool(cmp_i64(*op, a, b)))
             }
         },
+        Expr::Block { stmts, tail, .. } => {
+            let mut inner = env.clone();
+            for st in stmts {
+                if let Stmt::Let { name, init, .. } = st {
+                    let v = eval_expr(init, &mut inner, ret)?;
+                    inner.insert(name.clone(), v);
+                }
+            }
+            eval_expr(tail, &mut inner, ret)
+        }
         Expr::If {
             cond,
             then_b,
@@ -322,6 +332,7 @@ fn expr_span(e: &Expr) -> Span {
         | Expr::Binary { span, .. }
         | Expr::Cmp { span, .. }
         | Expr::If { span, .. }
+        | Expr::Block { span, .. }
         | Expr::Match { span, .. } => *span,
         Expr::Ok(inner) | Expr::Err(inner) => expr_span(inner),
     }

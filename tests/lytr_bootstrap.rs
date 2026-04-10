@@ -61,6 +61,14 @@ fn main() -> i32 {
 }
 
 #[test]
+fn if_branch_block_with_lets() {
+    let src = include_str!("../examples/if_block.lytr");
+    let p = parse_lytr_program(src).unwrap();
+    check_lytr_program(&p).unwrap();
+    assert_eq!(run_lytr_program(&p).unwrap(), LytrRun::I32(42));
+}
+
+#[test]
 fn i64_main_large_literal() {
     let src = r"lytr/0.1
 
