@@ -8,6 +8,7 @@ Usage (repo root):
   python3 eval/summarize_llm_tracks.py
   python3 eval/summarize_llm_tracks.py --lir eval/results_llm.ndjson --lytr eval/results_llm_lytr.ndjson
   python3 eval/summarize_llm_tracks.py --json-out eval/llm_tracks_summary.json
+  python3 eval/summarize_llm_tracks.py --json-out eval/llm_tracks_summary.json -q   # JSON only, no table
 
 Missing files are skipped (only arms with existing logs are reported).
 """
@@ -138,6 +139,12 @@ def main() -> int:
         default=None,
         help="Write full summary JSON to this path",
     )
+    ap.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Suppress the human-readable table (still writes --json-out if set)",
+    )
     args = ap.parse_args()
 
     lir_path = args.lir if args.lir.is_absolute() else ROOT / args.lir
@@ -231,45 +238,51 @@ def main() -> int:
         "arms": arms,
     }
 
+    if not args.quiet:
+        print("llm_tracks_summary")
+        if arms["lir"].get("missing"):
+            print(f"  LIR:  (missing) {arms['lir']['path']}")
+        else:
+            a = arms["lir"]
+            t = a["tokens_total"]
+            print(
+                f"  LIR:  {a['pass_n']}/{a['tasks_n']} tasks pass | "
+                f"tokens {t['prompt']}+{t['completion']}={t['prompt_plus_completion']} (prompt+completion)"
+            )
+        if arms["lytr"].get("missing"):
+            print(f"  LYTR: (missing) {arms['lytr']['path']}")
+        else:
+            a = arms["lytr"]
+            t = a["tokens_total"]
+            print(
+                f"  LYTR: {a['pass_n']}/{a['tasks_n']} tasks pass | "
+                f"tokens {t['prompt']}+{t['completion']}={t['prompt_plus_completion']} (prompt+completion)"
+            )
+
+        if shared:
+            st = doc["shared_token_totals"]
+            print(
+                f"  Shared tasks ({len(shared)}): token sums  LIR={st['sum_tokens_lir']}  "
+                f"LYTR={st['sum_tokens_lytr']}  ratio={st['lytr_over_lir_ratio']}"
+            )
+            for row in comparison:
+                r = row["lytr_over_lir_token_ratio"]
+                rs = f"{r}" if r is not None else "—"
+                print(
+                    f"    {row['task_id']}:  LIR pass={row['lir_pass']} tok={row['tokens_lir']} | "
+                    f"LYTR pass={row['lytr_pass']} tok={row['tokens_lytr']} | lytr/lir tok {rs}"
+                )
+        else:
+            print(
+                "  (no shared task ids in both logs — run both LLM evals on overlapping tasks to compare)"
+            )
+
     if args.json_out:
         out_p = args.json_out if args.json_out.is_absolute() else ROOT / args.json_out
         out_p.parent.mkdir(parents=True, exist_ok=True)
         out_p.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
-        print(f"wrote {out_p}")
-
-    # Human-readable summary
-    print("llm_tracks_summary")
-    if arms["lir"].get("missing"):
-        print(f"  LIR:  (missing) {arms['lir']['path']}")
-    else:
-        a = arms["lir"]
-        t = a["tokens_total"]
-        print(
-            f"  LIR:  {a['pass_n']}/{a['tasks_n']} tasks pass | "
-            f"tokens {t['prompt']}+{t['completion']}={t['prompt_plus_completion']} (prompt+completion)"
-        )
-    if arms["lytr"].get("missing"):
-        print(f"  LYTR: (missing) {arms['lytr']['path']}")
-    else:
-        a = arms["lytr"]
-        t = a["tokens_total"]
-        print(
-            f"  LYTR: {a['pass_n']}/{a['tasks_n']} tasks pass | "
-            f"tokens {t['prompt']}+{t['completion']}={t['prompt_plus_completion']} (prompt+completion)"
-        )
-
-    if shared:
-        st = doc["shared_token_totals"]
-        print(f"  Shared tasks ({len(shared)}): token sums  LIR={st['sum_tokens_lir']}  LYTR={st['sum_tokens_lytr']}  ratio={st['lytr_over_lir_ratio']}")
-        for row in comparison:
-            r = row["lytr_over_lir_token_ratio"]
-            rs = f"{r}" if r is not None else "—"
-            print(
-                f"    {row['task_id']}:  LIR pass={row['lir_pass']} tok={row['tokens_lir']} | "
-                f"LYTR pass={row['lytr_pass']} tok={row['tokens_lytr']} | lytr/lir tok {rs}"
-            )
-    else:
-        print("  (no shared task ids in both logs — run both LLM evals on overlapping tasks to compare)")
+        if not args.quiet:
+            print(f"wrote {out_p.resolve()}")
 
     return 0
 

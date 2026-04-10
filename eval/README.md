@@ -120,6 +120,8 @@ After one or more live runs, **`eval/summarize_llm_tracks.py`** reads **`results
 ```bash
 python3 eval/summarize_llm_tracks.py
 python3 eval/summarize_llm_tracks.py --json-out eval/llm_tracks_summary.json
+# Table first, then one `wrote …` line; use `-q` for JSON-only (no stdout table)
+python3 eval/summarize_llm_tracks.py --json-out eval/llm_tracks_summary.json -q
 ```
 
 You do **not** need the OpenAI cloud: any **OpenAI-compatible** HTTP server works — set **`OPENAI_BASE_URL`** (and **`LLM_MODEL`**) to e.g. local **Ollama** / **LM Studio** / **vLLM**; **`OPENAI_API_KEY`** may be a placeholder if the server does not require one.
