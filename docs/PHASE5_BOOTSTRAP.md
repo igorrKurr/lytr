@@ -5,9 +5,14 @@ The **Phase 5 exit criterion** — *tiny LYTR programs parse, check, run* — is
 ## Done (this repo)
 
 - **`lytr` CLI:** `lytr check <file.lytr>`, `lytr run <file.lytr>` (see `cargo run --bin lytr -- --help`).
-- **Language:** first line `lytr/0.1`, then `fn main() -> i32 { return <expr>; }` with integer literals, `+ - * / %`, parentheses.
+- **Language:** first line `lytr/0.1`, then `fn main() -> i32 { … }` with:
+  - **`let`** (`let x: i32 = …;` or inferred `let x = …;`), types `i32`, `bool`, `Result<i32, i32>`;
+  - **Arithmetic / compare:** `+ - * / %`, `== != < > <= >=`, unary `-` on literals;
+  - **`if`** expression: `if cond { e1 } else { e2 }` (condition must be `bool`);
+  - **`Ok` / `Err`** (i32 payloads only) and **`match`** with required `Ok(x) => …` and `Err(y) => …` arms;
+  - **`return`** must be the **last** statement; only **`let`** may appear before it.
 - **Library API:** `parse_lytr_program`, `check_lytr_program`, `run_lytr_program` ([`src/lytr/`](../src/lytr/)).
-- **Example:** [`examples/minimal.lytr`](../examples/minimal.lytr); tests in [`tests/lytr_bootstrap.rs`](../tests/lytr_bootstrap.rs).
+- **Examples:** [`examples/minimal.lytr`](../examples/minimal.lytr), [`examples/let_if.lytr`](../examples/let_if.lytr), [`examples/match.lytr`](../examples/match.lytr); tests in [`tests/lytr_bootstrap.rs`](../tests/lytr_bootstrap.rs).
 
 ## Next (expand LYTR 0.1)
 

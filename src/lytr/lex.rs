@@ -1,4 +1,4 @@
-//! Lexer for LYTR 0.1 bootstrap subset.
+//! Lexer for LYTR 0.1 bootstrap.
 
 use crate::Span;
 
@@ -8,19 +8,40 @@ use super::error::LytrError;
 pub enum TokenKind {
     Fn,
     Main,
+    Let,
+    If,
+    Else,
+    Return,
+    True,
+    False,
+    Bool,
+    I32,
+    Result,
+    Ok,
+    Err,
+    Match,
     LParen,
     RParen,
-    Arrow,
-    I32,
     LBrace,
     RBrace,
-    Return,
+    Arrow,
     Semi,
+    Comma,
+    Colon,
+    FatArrow,
+    Lt,
+    Gt,
+    Assign,
+    EqEq,
+    Ne,
+    Le,
+    Ge,
     Plus,
     Minus,
     Star,
     Slash,
     Percent,
+    Ident, // name = src[span]
     Int(i32),
     Eof,
 }
@@ -53,12 +74,33 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
 
         let start = base + i;
 
-        if b == b'-' && i + 1 < n && bytes[i + 1] == b'>' {
-            i += 2;
-            let end = base + i;
+        // Two-char operators (before single-char)
+        if i + 1 < n {
+            let two = [bytes[i], bytes[i + 1]];
+            let kind = match two {
+                [b'-', b'>'] => Some((TokenKind::Arrow, 2)),
+                [b'=', b'='] => Some((TokenKind::EqEq, 2)),
+                [b'!', b'='] => Some((TokenKind::Ne, 2)),
+                [b'<', b'='] => Some((TokenKind::Le, 2)),
+                [b'>', b'='] => Some((TokenKind::Ge, 2)),
+                [b'=', b'>'] => Some((TokenKind::FatArrow, 2)),
+                _ => None,
+            };
+            if let Some((kind, len)) = kind {
+                i += len;
+                out.push(Token {
+                    kind,
+                    span: Span::new(start, base + i),
+                });
+                continue;
+            }
+        }
+
+        if b == b'=' {
+            i += 1;
             out.push(Token {
-                kind: TokenKind::Arrow,
-                span: Span::new(start, end),
+                kind: TokenKind::Assign,
+                span: Span::new(start, base + i),
             });
             continue;
         }
@@ -80,16 +122,19 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
             let kind = match word {
                 "fn" => TokenKind::Fn,
                 "main" => TokenKind::Main,
+                "let" => TokenKind::Let,
+                "if" => TokenKind::If,
+                "else" => TokenKind::Else,
                 "return" => TokenKind::Return,
+                "true" => TokenKind::True,
+                "false" => TokenKind::False,
+                "bool" => TokenKind::Bool,
                 "i32" => TokenKind::I32,
-                _ => {
-                    return Err(LytrError::Syntax {
-                        code: "E_LYTR_LEX",
-                        span,
-                        message: format!("unexpected word `{word}`"),
-                        fix_hint: "bootstrap only allows fn main() -> i32 { … }".into(),
-                    });
-                }
+                "Result" => TokenKind::Result,
+                "Ok" => TokenKind::Ok,
+                "Err" => TokenKind::Err,
+                "match" => TokenKind::Match,
+                _ => TokenKind::Ident,
             };
             out.push(Token { kind, span });
             continue;
@@ -126,6 +171,10 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
             b'{' => TokenKind::LBrace,
             b'}' => TokenKind::RBrace,
             b';' => TokenKind::Semi,
+            b',' => TokenKind::Comma,
+            b':' => TokenKind::Colon,
+            b'<' => TokenKind::Lt,
+            b'>' => TokenKind::Gt,
             b'+' => TokenKind::Plus,
             b'-' => TokenKind::Minus,
             b'*' => TokenKind::Star,
@@ -136,7 +185,7 @@ pub fn tokenize(src: &str, base: usize) -> Result<Vec<Token>, LytrError> {
                     code: "E_LYTR_LEX",
                     span,
                     message: format!("unexpected character `{}`", b as char),
-                    fix_hint: "bootstrap syntax: fn main() -> i32 {{ return expr; }}".into(),
+                    fix_hint: "see docs/LYTR_CORE_CALCULUS_DRAFT.md".into(),
                 });
             }
         };

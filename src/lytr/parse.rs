@@ -1,14 +1,15 @@
-//! Parser: `lytr/0.1` + `fn main() -> i32 { return <expr>; }`
+//! Parser: edition `lytr/0.1` + `fn main() -> i32 { … }`.
 
 use crate::Span;
 
-use super::ast::{BinOp, Block, Expr, FnItem, Program, Stmt};
+use super::ast::{
+    BinOp, Block, CmpOp, Expr, FnItem, Program, Stmt, Ty,
+};
 use super::error::LytrError;
 use super::lex::{tokenize, Token, TokenKind};
 
 const EDITION: &str = "lytr/0.1";
 
-/// Strip `lytr/0.1` and following newline; return body slice and byte offset of body start.
 fn strip_edition(full_src: &str) -> Result<(&str, usize), LytrError> {
     let after_edition = full_src.strip_prefix(EDITION).ok_or_else(|| LytrError::Syntax {
         code: "E_LYTR_HEADER",
@@ -37,18 +38,27 @@ fn strip_edition(full_src: &str) -> Result<(&str, usize), LytrError> {
 pub fn parse_lytr_program(full_src: &str) -> Result<Program, LytrError> {
     let (body, body_start) = strip_edition(full_src)?;
     let tokens = tokenize(body, body_start)?;
-    let mut p = Parser::new(&tokens);
+    let mut p = Parser::new(&tokens, full_src);
     p.parse_program()
 }
 
 struct Parser<'a> {
     tokens: &'a [Token],
     i: usize,
+    src: &'a str,
 }
 
 impl<'a> Parser<'a> {
-    fn new(tokens: &'a [Token]) -> Self {
-        Self { tokens, i: 0 }
+    fn new(tokens: &'a [Token], full_src: &'a str) -> Self {
+        Self {
+            tokens,
+            i: 0,
+            src: full_src,
+        }
+    }
+
+    fn ident_text(&self, span: Span) -> String {
+        self.src[span.start..span.end].to_string()
     }
 
     fn cur(&self) -> Token {
@@ -70,10 +80,26 @@ impl<'a> Parser<'a> {
                 code: "E_LYTR_PARSE",
                 span: t.span,
                 message: format!("unexpected token (expected {want:?}, got {:?})", t.kind),
-                fix_hint: "check fn main() -> i32 { return … }".into(),
+                fix_hint: "see docs/LYTR_CORE_CALCULUS_DRAFT.md".into(),
             });
         }
         Ok(self.bump())
+    }
+
+    fn expect_ident(&mut self) -> Result<(String, Span), LytrError> {
+        let t = self.cur();
+        if t.kind != TokenKind::Ident {
+            return Err(LytrError::Syntax {
+                code: "E_LYTR_PARSE",
+                span: t.span,
+                message: "expected identifier".into(),
+                fix_hint: "use a name like `x` or `count`".into(),
+            });
+        }
+        let span = t.span;
+        let s = self.ident_text(span);
+        self.bump();
+        Ok((s, span))
     }
 
     fn parse_program(&mut self) -> Result<Program, LytrError> {
@@ -110,8 +136,45 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_stmt(&mut self) -> Result<Stmt, LytrError> {
+        match self.cur().kind {
+            TokenKind::Let => self.parse_let_stmt(),
+            TokenKind::Return => self.parse_return_stmt(),
+            _ => Err(LytrError::Syntax {
+                code: "E_LYTR_PARSE",
+                span: self.cur().span,
+                message: "expected `let` or `return`".into(),
+                fix_hint: "each statement is `let …;` or `return …;`".into(),
+            }),
+        }
+    }
+
+    fn parse_let_stmt(&mut self) -> Result<Stmt, LytrError> {
+        let let_tok = self.expect(TokenKind::Let)?;
+        let (name, name_span) = self.expect_ident()?;
+        let (ty, init) = if self.cur().kind == TokenKind::Colon {
+            self.bump();
+            let t = self.parse_ty()?;
+            self.expect(TokenKind::Assign)?;
+            let e = self.parse_expr()?;
+            (Some(t), e)
+        } else {
+            self.expect(TokenKind::Assign)?;
+            let e = self.parse_expr()?;
+            (None, e)
+        };
+        let semi = self.expect(TokenKind::Semi)?;
+        Ok(Stmt::Let {
+            name,
+            name_span,
+            ty,
+            init,
+            span: Span::new(let_tok.span.start, semi.span.end),
+        })
+    }
+
+    fn parse_return_stmt(&mut self) -> Result<Stmt, LytrError> {
         let ret = self.expect(TokenKind::Return)?;
-        let expr = self.parse_expr(0)?;
+        let expr = self.parse_expr()?;
         let semi = self.expect(TokenKind::Semi)?;
         Ok(Stmt::Return {
             expr,
@@ -119,26 +182,77 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Pratt: `min_prec` 0 = `+` `-`, 1 = `*` `/` `%`.
-    fn parse_expr(&mut self, min_prec: u8) -> Result<Expr, LytrError> {
-        let mut lhs = self.parse_primary()?;
+    fn parse_ty(&mut self) -> Result<Ty, LytrError> {
+        match self.cur().kind {
+            TokenKind::I32 => {
+                self.bump();
+                Ok(Ty::I32)
+            }
+            TokenKind::Bool => {
+                self.bump();
+                Ok(Ty::Bool)
+            }
+            TokenKind::Result => {
+                self.bump();
+                self.expect(TokenKind::Lt)?;
+                self.expect(TokenKind::I32)?;
+                self.expect(TokenKind::Comma)?;
+                self.expect(TokenKind::I32)?;
+                self.expect(TokenKind::Gt)?;
+                Ok(Ty::ResultI32)
+            }
+            _ => Err(LytrError::Syntax {
+                code: "E_LYTR_PARSE",
+                span: self.cur().span,
+                message: "expected `i32`, `bool`, or `Result<i32, i32>`".into(),
+                fix_hint: "bootstrap types only".into(),
+            }),
+        }
+    }
+
+    /// Comparisons (loosest), then `+` `-`, then `*` `/` `%`.
+    fn parse_expr(&mut self) -> Result<Expr, LytrError> {
+        self.parse_cmp()
+    }
+
+    fn parse_cmp(&mut self) -> Result<Expr, LytrError> {
+        let mut lhs = self.parse_add()?;
         loop {
             let op = match self.cur().kind {
-                TokenKind::Plus if min_prec == 0 => Some(BinOp::Add),
-                TokenKind::Minus if min_prec == 0 => Some(BinOp::Sub),
-                TokenKind::Star if min_prec <= 1 => Some(BinOp::Mul),
-                TokenKind::Slash if min_prec <= 1 => Some(BinOp::Div),
-                TokenKind::Percent if min_prec <= 1 => Some(BinOp::Mod),
+                TokenKind::EqEq => Some(CmpOp::Eq),
+                TokenKind::Ne => Some(CmpOp::Ne),
+                TokenKind::Lt => Some(CmpOp::Lt),
+                TokenKind::Gt => Some(CmpOp::Gt),
+                TokenKind::Le => Some(CmpOp::Le),
+                TokenKind::Ge => Some(CmpOp::Ge),
                 _ => None,
             };
             let Some(op) = op else { break };
-            let prec = match op {
-                BinOp::Add | BinOp::Sub => 0u8,
-                BinOp::Mul | BinOp::Div | BinOp::Mod => 1u8,
-            };
             self.bump();
-            let rhs = self.parse_expr(prec + 1)?;
-            let span = Span::merge(lhs_span(&lhs), lhs_span(&rhs));
+            let rhs = self.parse_add()?;
+            let span = Span::merge(expr_span(&lhs), expr_span(&rhs));
+            lhs = Expr::Cmp {
+                op,
+                left: Box::new(lhs),
+                right: Box::new(rhs),
+                span,
+            };
+        }
+        Ok(lhs)
+    }
+
+    fn parse_add(&mut self) -> Result<Expr, LytrError> {
+        let mut lhs = self.parse_mul()?;
+        loop {
+            let op = match self.cur().kind {
+                TokenKind::Plus => Some(BinOp::Add),
+                TokenKind::Minus => Some(BinOp::Sub),
+                _ => None,
+            };
+            let Some(op) = op else { break };
+            self.bump();
+            let rhs = self.parse_mul()?;
+            let span = Span::merge(expr_span(&lhs), expr_span(&rhs));
             lhs = Expr::Binary {
                 op,
                 left: Box::new(lhs),
@@ -147,6 +261,57 @@ impl<'a> Parser<'a> {
             };
         }
         Ok(lhs)
+    }
+
+    fn parse_mul(&mut self) -> Result<Expr, LytrError> {
+        let mut lhs = self.parse_unary()?;
+        loop {
+            let op = match self.cur().kind {
+                TokenKind::Star => Some(BinOp::Mul),
+                TokenKind::Slash => Some(BinOp::Div),
+                TokenKind::Percent => Some(BinOp::Mod),
+                _ => None,
+            };
+            let Some(op) = op else { break };
+            self.bump();
+            let rhs = self.parse_unary()?;
+            let span = Span::merge(expr_span(&lhs), expr_span(&rhs));
+            lhs = Expr::Binary {
+                op,
+                left: Box::new(lhs),
+                right: Box::new(rhs),
+                span,
+            };
+        }
+        Ok(lhs)
+    }
+
+    fn parse_unary(&mut self) -> Result<Expr, LytrError> {
+        // unary `-` for negative literals: `-` INT
+        if self.cur().kind == TokenKind::Minus {
+            let m = self.bump().span;
+            let t = self.cur();
+            if let TokenKind::Int(v) = t.kind {
+                self.bump();
+                let span = Span::new(m.start, t.span.end);
+                return Ok(Expr::Int {
+                    value: v.checked_neg().ok_or_else(|| LytrError::Syntax {
+                        code: "E_LYTR_INT",
+                        span,
+                        message: "integer overflow".into(),
+                        fix_hint: "literal too large".into(),
+                    })?,
+                    span,
+                });
+            }
+            return Err(LytrError::Syntax {
+                code: "E_LYTR_PARSE",
+                span: t.span,
+                message: "expected integer after `-`".into(),
+                fix_hint: "use `-42` as a single literal form".into(),
+            });
+        }
+        self.parse_primary()
     }
 
     fn parse_primary(&mut self) -> Result<Expr, LytrError> {
@@ -159,25 +324,126 @@ impl<'a> Parser<'a> {
                     span: t.span,
                 })
             }
+            TokenKind::True => {
+                self.bump();
+                Ok(Expr::BoolLit {
+                    value: true,
+                    span: t.span,
+                })
+            }
+            TokenKind::False => {
+                self.bump();
+                Ok(Expr::BoolLit {
+                    value: false,
+                    span: t.span,
+                })
+            }
+            TokenKind::Ident => {
+                let span = t.span;
+                let name = self.ident_text(span);
+                self.bump();
+                Ok(Expr::Var { name, span })
+            }
             TokenKind::LParen => {
                 self.bump();
-                let e = self.parse_expr(0)?;
+                let e = self.parse_expr()?;
                 self.expect(TokenKind::RParen)?;
                 Ok(e)
             }
+            TokenKind::If => self.parse_if_expr(),
+            TokenKind::Ok => self.parse_ok_expr(),
+            TokenKind::Err => self.parse_err_expr(),
+            TokenKind::Match => self.parse_match_expr(),
             _ => Err(LytrError::Syntax {
                 code: "E_LYTR_PARSE",
                 span: t.span,
-                message: "expected integer or `(`".into(),
-                fix_hint: "expression uses literals, + - * / %, and parentheses".into(),
+                message: "expected expression".into(),
+                fix_hint: "literal, variable, `(`, `if`, `Ok`, `Err`, or `match`".into(),
             }),
         }
     }
+
+    fn parse_if_expr(&mut self) -> Result<Expr, LytrError> {
+        let if_tok = self.expect(TokenKind::If)?;
+        let cond = self.parse_expr()?;
+        self.expect(TokenKind::LBrace)?;
+        let then_b = self.parse_expr()?;
+        self.expect(TokenKind::RBrace)?;
+        self.expect(TokenKind::Else)?;
+        self.expect(TokenKind::LBrace)?;
+        let else_b = self.parse_expr()?;
+        let rb = self.expect(TokenKind::RBrace)?;
+        let span = Span::new(if_tok.span.start, rb.span.end);
+        Ok(Expr::If {
+            cond: Box::new(cond),
+            then_b: Box::new(then_b),
+            else_b: Box::new(else_b),
+            span,
+        })
+    }
+
+    fn parse_ok_expr(&mut self) -> Result<Expr, LytrError> {
+        self.expect(TokenKind::Ok)?;
+        self.expect(TokenKind::LParen)?;
+        let inner = self.parse_expr()?;
+        self.expect(TokenKind::RParen)?;
+        Ok(Expr::Ok(Box::new(inner)))
+    }
+
+    fn parse_err_expr(&mut self) -> Result<Expr, LytrError> {
+        self.expect(TokenKind::Err)?;
+        self.expect(TokenKind::LParen)?;
+        let inner = self.parse_expr()?;
+        self.expect(TokenKind::RParen)?;
+        Ok(Expr::Err(Box::new(inner)))
+    }
+
+    fn parse_match_expr(&mut self) -> Result<Expr, LytrError> {
+        let match_tok = self.expect(TokenKind::Match)?;
+        let scrutinee = self.parse_expr()?;
+        self.expect(TokenKind::LBrace)?;
+        self.expect(TokenKind::Ok)?;
+        self.expect(TokenKind::LParen)?;
+        let (ok_name, ok_name_span) = self.expect_ident()?;
+        self.expect(TokenKind::RParen)?;
+        self.expect(TokenKind::FatArrow)?;
+        let ok_arm = self.parse_expr()?;
+        if self.cur().kind == TokenKind::Comma {
+            self.bump();
+        }
+        self.expect(TokenKind::Err)?;
+        self.expect(TokenKind::LParen)?;
+        let (err_name, err_name_span) = self.expect_ident()?;
+        self.expect(TokenKind::RParen)?;
+        self.expect(TokenKind::FatArrow)?;
+        let err_arm = self.parse_expr()?;
+        if self.cur().kind == TokenKind::Comma {
+            self.bump();
+        }
+        let rb = self.expect(TokenKind::RBrace)?;
+        let span = Span::new(match_tok.span.start, rb.span.end);
+        Ok(Expr::Match {
+            scrutinee: Box::new(scrutinee),
+            ok_name,
+            ok_name_span,
+            ok_arm: Box::new(ok_arm),
+            err_name,
+            err_name_span,
+            err_arm: Box::new(err_arm),
+            span,
+        })
+    }
 }
 
-fn lhs_span(e: &Expr) -> Span {
+fn expr_span(e: &Expr) -> Span {
     match e {
-        Expr::Int { span, .. } => *span,
-        Expr::Binary { span, .. } => *span,
+        Expr::Int { span, .. }
+        | Expr::BoolLit { span, .. }
+        | Expr::Var { span, .. }
+        | Expr::Binary { span, .. }
+        | Expr::Cmp { span, .. }
+        | Expr::If { span, .. }
+        | Expr::Match { span, .. } => *span,
+        Expr::Ok(inner) | Expr::Err(inner) => expr_span(inner),
     }
 }

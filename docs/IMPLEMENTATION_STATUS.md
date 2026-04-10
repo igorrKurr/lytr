@@ -9,7 +9,7 @@ This file is a **snapshot** of what is implemented in the repository versus what
 | **2** | LIR AST JSON, `dump-ast` / `apply-ast` | **Done** |
 | **3** | Tier A eval, LLM harness, pilot, regression | **Done** (continuous) |
 | **4** | Evidence / experiments | **Ongoing**; pilot conclusion: [EXPERIMENT_PILOT_LLM_AB.md](EXPERIMENT_PILOT_LLM_AB.md) |
-| **5** | LYTR charter + calculus + **bootstrap `lytr`** | **Papers + minimal `lytr` done**; full language **not** done |
+| **5** | LYTR charter + calculus + **bootstrap `lytr`** | **Papers + `lytr` with `let` / `if` / `Result`+`match` (subset)**; full LYTR **not** done |
 | **6** | Memory model (C1), prototypes | **Not implemented** (draft only) |
 | **7** | Concurrency v1 | **Not implemented** |
 | **8** | LYTR LLVM backend + LIR embed | **Not implemented** |

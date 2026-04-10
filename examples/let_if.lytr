@@ -1,0 +1,7 @@
+lytr/0.1
+
+fn main() -> i32 {
+  let a: i32 = 1;
+  let b: i32 = 2;
+  return if a < b { 10 } else { 0 };
+}

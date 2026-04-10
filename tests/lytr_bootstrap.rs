@@ -26,3 +26,36 @@ fn reject_bad_header() {
     let src = "lir/1\nfn main() -> i32 { return 0; }\n";
     assert!(parse_lytr_program(src).is_err());
 }
+
+#[test]
+fn let_and_if() {
+    let src = include_str!("../examples/let_if.lytr");
+    let p = parse_lytr_program(src).unwrap();
+    check_lytr_program(&p).unwrap();
+    assert_eq!(run_lytr_program(&p).unwrap(), 10);
+}
+
+#[test]
+fn result_match_ok_arm() {
+    let src = include_str!("../examples/match.lytr");
+    let p = parse_lytr_program(src).unwrap();
+    check_lytr_program(&p).unwrap();
+    assert_eq!(run_lytr_program(&p).unwrap(), 42);
+}
+
+#[test]
+fn result_match_err_arm() {
+    let src = r"lytr/0.1
+
+fn main() -> i32 {
+  let r = Err(7);
+  return match r {
+    Ok(v) => v,
+    Err(e) => e + 1
+  };
+}
+";
+    let p = parse_lytr_program(src).unwrap();
+    check_lytr_program(&p).unwrap();
+    assert_eq!(run_lytr_program(&p).unwrap(), 8);
+}

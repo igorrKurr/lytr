@@ -8,7 +8,7 @@
 2. If the program should compile, run **`lir codegen-check <file.lir>`** — only a **subset** of valid LIR lowers to LLVM/WASM (`docs/codegen_subset.json`, `docs/LLVM_ABI.md`).
 3. Run **`lir fmt --check <file.lir>`** before commit when touching sources (canonical §11 form).
 4. Optional: **`lir dump-ast <file.lir>`** prints JSON AST; **`lir apply-ast <file.json>`** round-trips to canonical text (see `docs/LIR_AST_JSON.md`).
-5. **LYTR 0.1 bootstrap:** **`lytr check`** / **`lytr run`** on `lytr/0.1` + `fn main() -> i32 { return expr; }` — see `docs/PHASE5_BOOTSTRAP.md` and `examples/minimal.lytr`.
+5. **LYTR 0.1 bootstrap:** **`lytr check`** / **`lytr run`** — `let`, `if`, `Ok`/`Err`, `match`, comparisons; see `docs/PHASE5_BOOTSTRAP.md` and `examples/*.lytr`.
 
 ## Errors
 
