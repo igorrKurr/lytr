@@ -113,6 +113,15 @@ OPENAI_API_KEY=... python3 eval/run_llm_lytr_eval.py --task 001_range_sum
 
 Use this to measure **tokens-to-success** for LYTR on the same **task ids** as the numeric parity harness, for comparison with LIR and Python LLM evals.
 
+### Summarize LIR vs LYTR LLM logs
+
+After one or more live runs, **`eval/summarize_llm_tracks.py`** reads **`results_llm.ndjson`** and **`results_llm_lytr.ndjson`**, takes the **last `llm_response` block per `task_id`** (so appended re-runs do not double-count failures), and prints pass counts plus **per–shared-task** token totals and **LYTR/LIR** ratio:
+
+```bash
+python3 eval/summarize_llm_tracks.py
+python3 eval/summarize_llm_tracks.py --json-out eval/llm_tracks_summary.json
+```
+
 You do **not** need the OpenAI cloud: any **OpenAI-compatible** HTTP server works — set **`OPENAI_BASE_URL`** (and **`LLM_MODEL`**) to e.g. local **Ollama** / **LM Studio** / **vLLM**; **`OPENAI_API_KEY`** may be a placeholder if the server does not require one.
 
 ## Baseline comparison (Python)
