@@ -95,6 +95,8 @@ Environment:
 | `LLM_RETRY_ON_FAIL` | If `1` / `true` (default), when `lir check` fails the harness sends **one** follow-up with compiler stderr. Set `0` to disable. |
 | `LLM_CANONICALIZE` | If `1` / `true` (default), run `lir fmt` on the model’s extracted file **before** assertions (simulates format-on-save). Set `0` to grade raw spacing and keep **`fmt_check`** strict. |
 
+**Local or self-hosted models:** point **`OPENAI_BASE_URL`** at any OpenAI-compatible server (Ollama, LM Studio, vLLM, …); **`LLM_MODEL`** must match that server’s model id. The variable name **`OPENAI_API_KEY`** is only the HTTP `Authorization` header — use a dummy key if the local server ignores it.
+
 Each `llm_response` line includes **`tokens_prompt`** / **`tokens_completion`** from the API (billing) and **`tokens_prompt_system`** / **`tokens_prompt_user`**: tiktoken counts of the system and first user message bodies only (no chat framing). Install **`tiktoken`** for accuracy (`pip install -r eval/requirements-eval.txt`); without it, a rough character fallback is used.
 
 **Exit codes:** `0` = all assertions passed; `1` = at least one failure; `2` = missing `OPENAI_API_KEY` (and not `--dry-run`). NDJSON lines are appended to **`eval/results_llm.ndjson`** (gitignored): per-assertion records (including **`stderr_got`** when a check/run fails), `llm_response` lines with **`lir_preview`**, and merged `tokens_*` when a retry runs.
@@ -110,6 +112,8 @@ OPENAI_API_KEY=... python3 eval/run_llm_lytr_eval.py --task 001_range_sum
 ```
 
 Use this to measure **tokens-to-success** for LYTR on the same **task ids** as the numeric parity harness, for comparison with LIR and Python LLM evals.
+
+You do **not** need the OpenAI cloud: any **OpenAI-compatible** HTTP server works — set **`OPENAI_BASE_URL`** (and **`LLM_MODEL`**) to e.g. local **Ollama** / **LM Studio** / **vLLM**; **`OPENAI_API_KEY`** may be a placeholder if the server does not require one.
 
 ## Baseline comparison (Python)
 
